@@ -1,34 +1,51 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Syne, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const syne = Syne({
   subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+  variable: "--font-syne",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dmSans = DM_Sans({
   subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Namestay-Code",
-  description: "Namestay-Code is platform where you can learn coding by your own pace without falling into any tutoroal hell.",
+  title: "PrepPath — Learn Anything. Your Way.",
+  description:
+    "AI-generated courses tailored to your exact knowledge level. Type a topic, choose your depth — PrepPath builds the curriculum for you.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <ClerkProvider>
+    <html
+      lang="en"
+      className={`${syne.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="bg-[#070708] font-body text-white antialiased">
         {children}
       </body>
     </html>
+    </ClerkProvider>
   );
 }
