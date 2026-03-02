@@ -20,6 +20,7 @@ export const coursesTable = pgTable("courses", {
   courseJson: json(),
   userEmail: varchar('userEmail'), //.references(() => usersTable.email).notNull()
   bannerImage: varchar("banner_image",{ length: 255 }).default(""),
+  isCloned: boolean().default(false) // New field to indicate if this course is a cloned version
 });
 
 
@@ -31,4 +32,5 @@ export const chaptersContentTable = pgTable("chapters_content", {
   content: text("content").notNull(), // The long-form generated HTML/Markdown
   videoId: varchar("video_id"), // For later if you add YouTube integration
   isCompleted: boolean('isCompleted').default(false).notNull(),
+  
 });

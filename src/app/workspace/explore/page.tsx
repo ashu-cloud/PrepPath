@@ -21,18 +21,27 @@ export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const fetchAllCourses = async () => {
-      try {
-        const res = await axios.get('/api/all-courses');
+  const fetchAllCourses = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get('/api/all-courses');
+      
+      // Ensure we received an array
+      if (Array.isArray(res.data)) {
         setCourses(res.data);
-      } catch (error) {
-        console.error("Failed to fetch explore courses:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error("API did not return an array:", res.data);
+        setCourses([]);
       }
-    };
-    fetchAllCourses();
-  }, []);
+    } catch (error) {
+      console.error("Failed to fetch explore courses:", error);
+      setCourses([]); // Set to empty array to prevent .map() crash
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchAllCourses();
+}, []);
 
   // Filter logic for search
   const filteredCourses = courses.filter(course => 

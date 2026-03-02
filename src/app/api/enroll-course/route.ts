@@ -33,6 +33,7 @@ export async function POST(req: Request) {
             ...courseData,
             cid: newUserCid,
             userEmail: userEmail,
+            isCloned: true, 
         });
 
         // 5. Duplicate the Chapter Content (so the user doesn't have to re-bake them)
