@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { PanelLeftIcon } from "lucide-react"
+import { PanelLeftIcon, Command } from "lucide-react"
 import { Slot } from "radix-ui"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -266,14 +266,17 @@ function SidebarTrigger({
       data-slot="sidebar-trigger"
       variant="ghost"
       size="icon"
-      className={cn("size-7", className)}
+      className={cn(
+        "group relative size-8 overflow-hidden rounded-xl bg-white/[0.02] border border-white/[0.05] transition-all hover:bg-violet-500/10 hover:border-violet-500/30 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)]", 
+        className
+      )}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()
       }}
       {...props}
     >
-      <PanelLeftIcon />
+      <Command className="h-4 w-4 text-white/50 transition-all duration-500 group-hover:text-violet-400 group-hover:rotate-[360deg] group-hover:scale-110" />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )

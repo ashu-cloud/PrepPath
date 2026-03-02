@@ -30,4 +30,5 @@ export const chaptersContentTable = pgTable("chapters_content", {
   chapterId: integer("chapter_id").notNull(), // The index of the chapter (0, 1, 2...)
   content: text("content").notNull(), // The long-form generated HTML/Markdown
   videoId: varchar("video_id"), // For later if you add YouTube integration
+  isCompleted: boolean('isCompleted').default(false).notNull(),
 });

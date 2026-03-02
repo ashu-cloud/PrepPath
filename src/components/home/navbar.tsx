@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { Rocket } from "lucide-react";
 
 const links = [
   { label: "Courses", href: "/courses" },
@@ -33,12 +34,12 @@ export default function Navbar() {
     >
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-gradient-to-br from-violet-500 to-sky-400 text-xs font-black text-white">
-          P
-        </div>
-        <span className="font-display text-[1.1rem] font-extrabold tracking-tight">
-          PrepPath
-        </span>
+        <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-sky-500 shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all duration-300 group-hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] group-hover:-rotate-12">
+            <Rocket className="h-5 w-5 text-white transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1" />
+          </div>
+          <span className="font-display text-[1.2rem] font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
+            PrepPath
+          </span>
       </Link>
 
       {/* Links */}
