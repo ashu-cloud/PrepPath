@@ -46,19 +46,49 @@ function AddNewCourseDialogue({ children }: { children: React.ReactNode }) {
 
   const OnGenerateCourse = async () => {
     // 1. Basic Validation
-    const courseId = uuidv4();
     if (!formData.courseName || !formData.category || !formData.difficultyLevel) {
       setErrorMessage("Please fill out all required fields.");
       return;
     }
+
     setLoading(true);
-    const result =  await axios.post("/api/generate-course-layout", {
-      ...formData
-    })
-    
-    console.log("API Response:", result.data);
-    setLoading(false);
-    router.push(`/workspace/edit-course/${result.data?.courseId}`) // Navigate to the new course page using the returned CID
+    setErrorMessage(""); // Clear any previous errors
+
+    try {
+      // 2. Use fetch to ensure Clerk auth cookies are sent securely
+      const response = await fetch("/api/generate-course-layout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      // 3. Catch custom errors (like 409 Duplicate or 401 Unauthorized)
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate course.");
+      }
+
+      console.log("API Response:", data);
+
+      // 4. Route to the new page using the UUID (`cid`) returned by
+      // the backend.  The earlier bug you saw (404/`courseId=6`) happened
+      // because we were mistakenly navigating with the numeric PK.
+      const newCourseId = data.cid;
+      
+      // Navigate to the edit page
+      router.push(`/workspace/edit-course/${newCourseId}`);
+
+    } catch (error: any) {
+      console.error("Error generating course:", error);
+      // Display the error beautifully in the UI instead of crashing
+      setErrorMessage(error.message || "An unexpected error occurred.");
+    } finally {
+      // 5. finally{} ensures the loading state stops spinning no matter what happens!
+      setLoading(false);
+    }
   }
 
   return (

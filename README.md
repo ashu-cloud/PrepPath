@@ -29,6 +29,37 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Database Configuration
+
+This project expects a `DATABASE_URL` environment variable pointing to a
+PostgreSQL database (we use Neon). Create a `.env.local` file in the project
+root with a line such as:
+
+```env
+DATABASE_URL="postgresql://username:password@<your-db-host>.db.neon.tech/<dbname>?sslmode=require"
+
+# Common pitfall
+# Instead of the `db` host you might accidentally copy the `api` endpoint
+# from Neon (it looks similar but starts with `api.`). Using the API URL
+# results in errors like `ENOTFOUND` or `Connect Timeout Error` as you're
+# seeing in the screenshot.  Make sure the host part of the string ends with
+# `.db.neon.tech`.
+
+# (Optional) model override for Gemini content generation
+# The project defaults to `gemini-2.5-flash`, but you'll need to update
+# this if Google retires the model or you want to try a different one.
+# Use `npm run list-models` or inspect the API to see what's available.
+GEMINI_CONTENT_MODEL="gemini-2.5-flash"
+```
+
+> **Important:** copy the **connection string** from your Neon dashboard and
+> make sure the host is the `db` endpoint (e.g. `*.db.neon.tech`) not the
+> `api` endpoint. An incorrect host will produce the `getaddrinfo ENOTFOUND`
+> errors you were seeing.
+
+Restart the development server after updating `.env.local` so Next.js picks up
+the new variable.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

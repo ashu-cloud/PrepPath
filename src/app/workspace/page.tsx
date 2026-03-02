@@ -1,11 +1,15 @@
 import React from 'react'
+import WelcomeBanner from './_components/WelcomeBanner'
+import Courses from './_components/Courses'
 
-function WorkSpacePage() {
+function WorkspacePage() {
   return (
-    <div>
-      
+    <div className="flex flex-col gap-6">
+      {/* Dashboard specific components go here! */}
+      <WelcomeBanner />
+      <Courses />
     </div>
   )
 }
 
-export default WorkSpacePage
+export default WorkspacePage

@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@plugin "@tailwindcss/typography";
+
+@import "highlight.js/styles/atom-one-dark.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -201,3 +207,4 @@
     cursor: none !important;
   }
 }
+

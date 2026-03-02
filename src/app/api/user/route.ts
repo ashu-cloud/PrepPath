@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { usersTable } from "@/conifg/schema";
-import db from "@/conifg/db";
+import { usersTable } from "@/config/schema";
+import db from "@/config/db";
 import { eq } from "drizzle-orm";
 
 export async function POST(request: Request) {

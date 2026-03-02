@@ -1,9 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
-import db from "@/conifg/db"; // Note: Ensure this folder is actually named 'conifg' and not 'config'
-import { couresesTable } from "@/conifg/schema";
+import db from "@/config/db";
+import { coursesTable } from "@/config/schema";
 import { ilike } from "drizzle-orm";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { v4 as uuidv4 } from "uuid";
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -13,49 +13,42 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET 
 });
 
-const Prompt = `You are an elite Instructional Designer and Subject Matter Expert from a top-tier tech academy. Your objective is to architect a world-class, premium learning curriculum that is HYPER-PERSONALIZED to the user's exact profile, industry, and skill level.
+const Prompt = `You are an elite Instructional Designer. Your objective is to architect a world-class, premium learning curriculum.
 
 ### 1. THE LEARNER'S PROFILE:
 * Course Target: {courseName}
-* Learner's Goal/Description: {courseDescription}
-* Industry/Category: {category}
-* Target Difficulty: {difficultyLevel}
-* Requested Modules: {numberOfModules}
-* Requires Video/Lectures: {includeLectures}
+* Learner's Goal: {courseDescription}
+* Category: {category}
+* Difficulty: {difficultyLevel}
+* Modules: {numberOfModules}
+* Video: {includeLectures}
 
-### 2. ELITE PEDAGOGY GUIDELINES (STRICT ADHERENCE REQUIRED):
-* **Difficulty Calibration (Crucial):**
-  - IF BEGINNER: Focus on foundational analogies, "the why," and quick wins. Strip away intimidating jargon. 
-  - IF INTERMEDIATE: Bridge theory and practice. Focus on industry tooling, best practices, and building complete features.
-  - IF ADVANCED: Skip the basics entirely. Dive straight into complex architecture, edge cases, system design, and performance optimization.
-* **Industry Context:** Ensure all \`topics\` and chapter titles are deeply relevant to the "{category}" industry. Use real-world scenarios (e.g., if category is Finance, use topics like "Building a Real-Time Ticker" rather than "Using WebSockets").
-* **Constraint Matching:** You MUST generate exactly {numberOfModules} chapters. Distribute the cognitive load logically across this exact number.
-* **Action-Oriented Milestones:** Frame \`chapterName\` and \`topics\` as active, exciting achievements. (e.g., Use "Architecting Scalable Global State" instead of just "State Management").
-* **The Capstone Effect:** The final chapter must be a practical, real-world project that synthesizes everything learned in the previous modules.
+### 2. PEDAGOGY GUIDELINES:
+* IF BEGINNER: Focus on foundational analogies and quick wins. 
+* IF INTERMEDIATE: Focus on industry tooling and best practices.
+* IF ADVANCED: Dive straight into complex architecture and system design.
+* You MUST generate exactly {numberOfModules} chapters.
+* Frame chapterNames and topics as active, exciting achievements.
 
-### 3. BANNER IMAGE INSTRUCTIONS:
-Generate a highly detailed \`bannerImagePrompt\` using this exact template:
-"A highly polished, premium 3D isometric illustration representing {courseName}. Include sleek modern UI/UX elements, glowing tech accents, and creative tools relevant to the {category} industry. The color palette should be deep dark mode backgrounds (#13131a) with vibrant glowing accents of violet, purple, and cyan. The image must look highly technical, cinematic, and inspiring, perfectly suited for a(n) {difficultyLevel} audience."
+### 3. OUTPUT CONSTRAINTS (CRITICAL):
+You must respond STRICTLY with valid JSON. Do not include markdown formatting blocks (like \`\`\`json). Do not use unescaped quotation marks inside your strings. Failure to provide perfectly formatted JSON will crash the application.
 
-### 4. OUTPUT CONSTRAINTS (SYSTEM CRITICAL):
-You must respond STRICTLY with valid JSON matching the exact schema below. Do not include markdown formatting blocks (like \`\`\`json), conversational text, or explanations. Failure to provide raw JSON will crash the application.
-
-### SCHEMA:
+EXPECTED EXACT JSON STRUCTURE:
 {
   "course": {
-    "name": "string (A catchy, premium title based on the input)",
-    "description": "string (A compelling 2-sentence hook selling the outcome of the course)",
+    "name": "Catchy premium title",
+    "description": "Compelling 2-sentence hook",
     "category": "{category}",
     "level": "{difficultyLevel}",
     "includeVideo": {includeLectures},
     "noOfChapters": {numberOfModules},
-    "bannerImagePrompt": "string",
     "chapters": [
       {
-        "chapterName": "string",
-        "duration": "string (e.g., '2 Hours', '45 Mins' - scale based on difficulty)",
+        "chapterName": "Name of the chapter",
+        "duration": "Scale based on difficulty (e.g., 2 Hours)",
         "topics": [
-          "string"
+          "Topic 1",
+          "Topic 2"
         ]
       }
     ]
@@ -65,8 +58,24 @@ You must respond STRICTLY with valid JSON matching the exact schema below. Do no
 export const POST = async (req: Request) => {
     try {
         const formData = await req.json();
+        const { userId } = await auth();
         const user = await currentUser();
         
+        
+        console.log("CLERK USER ID:", userId);
+        console.log("CLERK EMAIL:", user?.primaryEmailAddress?.emailAddress);
+
+        // 3. Updated Auth Guard with better error messages
+        if (!userId) {
+            return NextResponse.json({ error: "Clerk did not send a session cookie to the backend." }, { status: 401 });
+        }
+        
+        if (!user || !user.primaryEmailAddress?.emailAddress) {
+            return NextResponse.json({ error: "User is logged in, but has no primary email address." }, { status: 401 });
+        }
+
+        const safeUserEmail = user.primaryEmailAddress.emailAddress;
+
 
         // 🛑 AUTH GUARD: Prevent the Foreign Key Crash
         if (!user || !user.primaryEmailAddress?.emailAddress) {
@@ -76,13 +85,13 @@ export const POST = async (req: Request) => {
             );
         }
 
-        const safeUserEmail = user.primaryEmailAddress.emailAddress;
+      
 
         // Check for existing course to prevent duplicates
         const existingCourse = await db
             .select()
-            .from(couresesTable)
-            .where(ilike(couresesTable.name, formData.courseName))
+            .from(coursesTable)
+            .where(ilike(coursesTable.name, formData.courseName))
             .limit(1);
 
         if (existingCourse.length > 0) {
@@ -92,10 +101,12 @@ export const POST = async (req: Request) => {
             );
         }
 
-        // Initialize AI
-        const ai = new GoogleGenAI({
-            apiKey: process.env.GEMINI_API_KEY!,
-        });
+        // Initialize AI and guard API key
+        const geminiKey = process.env.GEMINI_API_KEY;
+        if (!geminiKey) {
+            return NextResponse.json({ error: "Missing GEMINI_API_KEY" }, { status: 500 });
+        }
+        const ai = new GoogleGenAI({ apiKey: geminiKey });
 
         // Use replaceAll to ensure all template tags are filled
         const finalPrompt = Prompt
@@ -106,56 +117,70 @@ export const POST = async (req: Request) => {
             .replaceAll("{numberOfModules}", String(formData.numberOfModules || 5))
             .replaceAll("{includeLectures}", String(formData.includeLectures || false));
 
-        // Generate Content
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: finalPrompt,
-            config: {
-                responseMimeType: "application/json", 
+        // Generate Content with retry/backoff for transient failures
+        const maxAttempts = 3;
+        let response: any = null;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                response = await ai.models.generateContent({
+                    model: process.env.GEMINI_CONTENT_MODEL || "gemini-2.5-flash",
+                    contents: finalPrompt,
+                    config: { responseMimeType: "application/json" }
+                });
+                if (!response || !response.text) {
+                    throw new Error("Empty AI response");
+                }
+                break; // success
+            } catch (gErr: any) {
+                console.warn(`AI request attempt ${attempt} failed:`, gErr?.message || gErr);
+                const isQuota = gErr?.status === 429 || gErr?.code === 429 || String(gErr?.message).includes('QuotaFailure') || String(gErr?.message).toLowerCase().includes('rate limit');
+                if (isQuota) {
+                    // If quota exhausted, return 429 immediately
+                    return NextResponse.json({ error: 'AI quota exceeded, try again later.' }, { status: 429 });
+                }
+                if (attempt === maxAttempts) throw gErr;
+                // exponential backoff before retry
+                const delayMs = 1000 * Math.pow(2, attempt);
+                await new Promise((r) => setTimeout(r, delayMs));
             }
-        });
-
-        if (!response.text) {
-            throw new Error("The AI returned an empty response.");
         }
 
-        const generatedCourse = JSON.parse(response.text);
+        let generatedCourse;
+        try {
+            // 1. Strip out markdown blocks just in case Gemini hallucinates them
+            let cleanJsonText = response.text.replace(/```json/g, "").replace(/```/g, "");
+            
+            // 2. Parse the cleaned JSON
+            generatedCourse = JSON.parse(cleanJsonText);
+        } catch (parseError) {
+            // 3. If it STILL fails, log exactly what Gemini generated so you can see the typo
+            console.log("🔥 BROKEN JSON RESPONSE FROM AI:", response.text);
+            throw new Error("The AI generated invalid course data. Please click Generate again.");
+        }
 
-       let finalImageUrl = ""; // We will save this URL to your Neon DB
+       let finalImageUrl = "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1080&auto=format&fit=crop"; 
 
         try {
-            // 1. Ask Gemini to generate the image
-            const imageResponse = await ai.models.generateImages({
-                model: 'imagen-3.0-generate-001',
-                prompt: generatedCourse.course.bannerImagePrompt,
-                config: {
-                    numberOfImages: 1,
-                    outputMimeType: "image/jpeg",
-                    aspectRatio: "16:9",
-                }
-            });
-
-            const rawBase64 = imageResponse.generatedImages?.[0].image?.imageBytes;
+            // We use the course category (e.g., "frontend", "python", "design") to search Unsplash
+            const searchQuery = encodeURIComponent(`${formData.category} technology`);
             
-            // 2. Format it properly for Cloudinary
-            const base64DataUri = `data:image/jpeg;base64,${rawBase64}`;
+            const unsplashResponse = await fetch(
+                `https://api.unsplash.com/photos/random?query=${searchQuery}&orientation=landscape&client_id=${process.env.UNSPLASH_ACCESS_KEY}`
+            );
 
-            // 3. Upload to Cloudinary
-            const uploadResult = await cloudinary.uploader.upload(base64DataUri, {
-                folder: "preppath_courses", // Keeps your Cloudinary dashboard organized
-            });
-
-            // 4. Extract the secure URL!
-            finalImageUrl = uploadResult.secure_url;
-            console.log("✅ Image successfully uploaded to Cloudinary:", finalImageUrl);
+            if (unsplashResponse.ok) {
+                const unsplashData = await unsplashResponse.json();
+                finalImageUrl = unsplashData.urls.regular; // Grabs the perfectly sized image URL
+                console.log("✅ Successfully grabbed Unsplash image:", finalImageUrl);
+            } else {
+                console.warn("⚠️ Unsplash API missed, using default fallback image.");
+            }
 
         } catch (imageError) {
-            console.error("⚠️ Image generation or upload failed:", imageError);
-            finalImageUrl = "https://your-default-placeholder-image-url.com/placeholder.jpg"; 
+            console.error("⚠️ Unsplash fetch error:", imageError);
         }
-
         // Insert into database
-        const [insertedCourse] = await db.insert(couresesTable).values({
+        const [insertedCourse] = await db.insert(coursesTable).values({
           
             cid: uuidv4(), 
             
@@ -171,8 +196,12 @@ export const POST = async (req: Request) => {
             bannerImage: finalImageUrl, // Save the Cloudinary URL to your database
         }).returning();
 
+        // include both the numeric PK and the UUID identifier so the
+        // frontend can decide which to use.  The UI prefers `cid` because
+        // that's what all other API calls are querying by.
         return NextResponse.json({
             dbId: insertedCourse.id,
+            cid: insertedCourse.cid,
             ...generatedCourse
         }, { status: 200 });
 

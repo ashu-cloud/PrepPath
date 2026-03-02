@@ -1,22 +1,19 @@
 import React from 'react'
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from './_components/AppsideBar'
 import AppHeader from './_components/AppHeader'
-import WelcomeBanner from './_components/WelcomeBanner'
-import Courses from './_components/Courses'
-
-
 
 function WorkspaceProvider({children}: {children: React.ReactNode}) {
   return (
     <SidebarProvider>
       <AppSidebar />
       <div className="flex min-h-screen w-full flex-col bg-[#070708]">
+        {/* The Header stays here so it shows on every page */}
         <AppHeader />
-        <WelcomeBanner />
-        <Courses />
+        
+        {/* The main content area where individual pages will render */}
         <main className="flex-1 p-6">
-          <div>{children}</div>
+          {children}
         </main>
       </div>
     </SidebarProvider>

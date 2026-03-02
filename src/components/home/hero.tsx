@@ -142,7 +142,7 @@ export default function Hero() {
         className="mt-10 flex flex-wrap items-center justify-center gap-4"
       >
         <Link
-          href="/signup"
+          href="/sign-up"
           className="group relative overflow-hidden rounded-full bg-gradient-to-r from-violet-600 to-violet-500 px-7 py-3 text-[0.9rem] font-bold tracking-tight text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(139,92,246,0.4)]"
         >
           <span className="relative z-10">Start Learning Free →</span>
