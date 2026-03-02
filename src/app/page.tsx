@@ -9,7 +9,7 @@ import {
   StatsSection,
   GenerateSection,
   TestimonialsSection,
-  CTASection,
+
   Footer,
 } from "@/components/home/sections";
 
@@ -37,10 +37,10 @@ export default function HomePage() {
       <MarqueeSection />
       <HowItWorks />
       <CoursesSection />
-      <StatsSection />
+      {/* <StatsSection /> */}
       <GenerateSection />
       <TestimonialsSection />
-      <CTASection />
+      {/* <CTASection /> */}
       <Footer />
     </main>
   );

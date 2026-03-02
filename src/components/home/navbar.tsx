@@ -6,8 +6,8 @@ import Link from "next/link";
 import { Rocket } from "lucide-react";
 
 const links = [
-  { label: "Courses", href: "/courses" },
-  { label: "Generate", href: "/generate" },
+  { label: "Courses", href: "/sign-up" },
+  { label: "Generate", href: "/sign-up" },
   { label: "Pricing", href: "/pricing" },
   { label: "Blog", href: "/blog" },
 ];
@@ -57,7 +57,7 @@ export default function Navbar() {
 
       {/* CTA */}
       <Link
-        href="/signup"
+        href="/sign-up"
         className="rounded-full bg-white px-5 py-2 text-[0.8rem] font-bold tracking-tight text-[#070708] transition-all hover:scale-105 hover:shadow-[0_0_24px_rgba(139,92,246,0.4)]"
       >
         Get Started Free

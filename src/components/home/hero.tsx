@@ -148,16 +148,18 @@ export default function Hero() {
           <span className="relative z-10">Start Learning Free →</span>
           <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-sky-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         </Link>
-
-        <button className="group flex items-center gap-2 text-[0.88rem] font-light text-white/40 transition-colors hover:text-white">
-          Watch demo
-          <svg
-            width="14" height="14" viewBox="0 0 14 14" fill="none"
-            className="transition-transform group-hover:translate-x-1"
-          >
-            <path d="M1 7h12M7 1l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        
+        <Link href="/blog">
+          <button className="group flex items-center gap-2 text-[0.88rem] font-light text-white/40 transition-colors hover:text-white">
+            Know Abut Us
+            <svg
+              width="14" height="14" viewBox="0 0 14 14" fill="none"
+              className="transition-transform group-hover:translate-x-1"
+            >
+              <path d="M1 7h12M7 1l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </Link>
       </motion.div>
 
       {/* Floating preview cards */}

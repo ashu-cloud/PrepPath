@@ -215,17 +215,17 @@ export function GenerateSection() {
 const TESTIMONIALS = [
   {
     text: "Generated a System Design course at intermediate level and it was exactly what I needed. Skipped all the basics I already knew and went deep on the hard parts.",
-    name: "Arjun K.", role: "SWE Intern @ Razorpay", avatar: "AK",
+    name: "Anubhav Verma", role: "Backend Dev @ Startup", avatar: "AV",
     avatarBg: "bg-violet-500/20 text-violet-300",
   },
   {
-    text: "I've tried every platform. PrepPath is different because it actually adapts. When I struggled with generics, the next module had more examples. It noticed.",
-    name: "Sneha P.", role: "3rd Year CS @ BITS", avatar: "SP",
+    text: "I've tried every platform. PrepPath is different because it actually adapts. When I struggled with generics, the next module had more examples.Very impressive.",
+    name: "Adarsh Thakur", role: "Student", avatar: "AT",
     avatarBg: "bg-emerald-500/15 text-emerald-400",
   },
   {
     text: "Generated a Redis course specifically for Node.js backend context. No generic fluff. Just exactly what I needed for my internship project. Used it day one.",
-    name: "Rahul V.", role: "Backend Dev @ Startup", avatar: "RV",
+    name: "Akshit Sharma", role: "Full-Stack Dev", avatar: "AS",
     avatarBg: "bg-sky-500/15 text-sky-400",
   },
 ];
@@ -285,49 +285,49 @@ export function TestimonialsSection() {
 // ─────────────────────────────────────────────
 // CTA
 // ─────────────────────────────────────────────
-export function CTASection() {
-  return (
-    <section className="mx-auto max-w-[1200px] px-6 pb-28">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        whileInView={{ opacity: 1, scale: 1 }}
-        viewport={{ once: true, margin: "-60px" }}
-        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-[28px] border border-white/[0.07] p-16 text-center"
-      >
-        {/* Glow */}
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[400px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/[0.13] blur-[80px]" />
+// export function CTASection() {
+//   return (
+//     <section className="mx-auto max-w-[1200px] px-6 pb-28">
+//       <motion.div
+//         initial={{ opacity: 0, scale: 0.96 }}
+//         whileInView={{ opacity: 1, scale: 1 }}
+//         viewport={{ once: true, margin: "-60px" }}
+//         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+//         className="relative overflow-hidden rounded-[28px] border border-white/[0.07] p-16 text-center"
+//       >
+//         {/* Glow */}
+//         <div className="pointer-events-none absolute left-1/2 top-0 h-[400px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/[0.13] blur-[80px]" />
 
-        <h2 className="relative font-display text-[clamp(2rem,4.5vw,3.5rem)] font-extrabold leading-[1.1] tracking-tight">
-          Start learning<br />
-          <span className="bg-gradient-to-r from-violet-400 to-sky-400 bg-clip-text text-transparent">
-            the smarter way.
-          </span>
-        </h2>
+//         <h2 className="relative font-display text-[clamp(2rem,4.5vw,3.5rem)] font-extrabold leading-[1.1] tracking-tight">
+//           Start learning<br />
+//           <span className="bg-gradient-to-r from-violet-400 to-sky-400 bg-clip-text text-transparent">
+//             the smarter way.
+//           </span>
+//         </h2>
 
-        <p className="relative mx-auto mt-4 max-w-[380px] text-[0.95rem] font-light text-white/35">
-          Free forever. No credit card. Generate your first course in 30 seconds.
-        </p>
+//         <p className="relative mx-auto mt-4 max-w-[380px] text-[0.95rem] font-light text-white/35">
+//           Free forever. No credit card. Generate your first course in 30 seconds.
+//         </p>
 
-        <div className="relative mt-9 flex flex-wrap items-center justify-center gap-3">
-          <input
-            type="email"
-            placeholder="Enter your email"
-            className="w-64 rounded-full border border-white/[0.08] bg-white/[0.04] px-5 py-3 text-[0.87rem] text-white placeholder-white/25 outline-none transition-colors focus:border-violet-500/50"
-          />
-          <button className="group relative overflow-hidden rounded-full bg-gradient-to-r from-violet-600 to-violet-500 px-6 py-3 text-[0.87rem] font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(139,92,246,0.4)]">
-            <span className="relative z-10">Get started →</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-sky-500 opacity-0 transition-opacity group-hover:opacity-100" />
-          </button>
-        </div>
+//         <div className="relative mt-9 flex flex-wrap items-center justify-center gap-3">
+//           <input
+//             type="email"
+//             placeholder="Enter your email"
+//             className="w-64 rounded-full border border-white/[0.08] bg-white/[0.04] px-5 py-3 text-[0.87rem] text-white placeholder-white/25 outline-none transition-colors focus:border-violet-500/50"
+//           />
+//           <button className="group relative overflow-hidden rounded-full bg-gradient-to-r from-violet-600 to-violet-500 px-6 py-3 text-[0.87rem] font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(139,92,246,0.4)]">
+//             <span className="relative z-10">Get started →</span>
+//             <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-sky-500 opacity-0 transition-opacity group-hover:opacity-100" />
+//           </button>
+//         </div>
 
-        <p className="relative mt-4 text-[0.7rem] text-white/20">
-          Join 48,000+ learners. Unsubscribe anytime.
-        </p>
-      </motion.div>
-    </section>
-  );
-}
+//         <p className="relative mt-4 text-[0.7rem] text-white/20">
+//           Join 48,000+ learners. Unsubscribe anytime.
+//         </p>
+//       </motion.div>
+//     </section>
+//   );
+// }
 
 // ─────────────────────────────────────────────
 // FOOTER

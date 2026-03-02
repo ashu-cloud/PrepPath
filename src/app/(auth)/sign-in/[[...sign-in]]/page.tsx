@@ -1,4 +1,5 @@
 import { SignIn } from '@clerk/nextjs'
+import { Rocket } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SignInPage() {
@@ -19,17 +20,17 @@ export default function SignInPage() {
       <div className="pointer-events-none absolute bottom-0 right-1/4 h-[300px] w-[300px] rounded-full bg-sky-500/[0.07] blur-[70px]" />
 
       {/* Logo */}
-      <Link
+      {/* <Link
         href="/"
         className="absolute left-6 top-6 flex items-center gap-2.5 z-10"
       >
         <div className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-gradient-to-br from-violet-500 to-sky-400 text-xs font-black text-white">
-          P
+          <Rocket className="h-5 w-5 text-white transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1" />
         </div>
-        <span className="font-display text-[1.05rem] font-extrabold tracking-tight text-white">
+        <span className="font-display text-[1.2rem] font-extrabold tracking-tight text-white">
           PrepPath
         </span>
-      </Link>
+      </Link> */}
 
       {/* Clerk SignIn — appearance overrides to match theme */}
       <div className="relative z-10">

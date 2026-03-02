@@ -1,4 +1,5 @@
 import { SignUp } from '@clerk/nextjs'
+import { Rocket } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SignUpPage() {
@@ -19,17 +20,15 @@ export default function SignUpPage() {
       <div className="pointer-events-none absolute bottom-0 right-1/4 h-[300px] w-[300px] rounded-full bg-sky-500/[0.07] blur-[70px]" />
 
       {/* Logo */}
-      <Link
-        href="/"
-        className="absolute left-6 top-6 flex items-center gap-2.5 z-10"
-      >
-        <div className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-gradient-to-br from-violet-500 to-sky-400 text-xs font-black text-white">
-          P
-        </div>
-        <span className="font-display text-[1.05rem] font-extrabold tracking-tight text-white">
-          PrepPath
-        </span>
-      </Link>
+      {/* <Link href="/" className="flex items-center gap-2.5">
+        <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-sky-500 shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all duration-300 group-hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] group-hover:-rotate-12">
+            <Rocket className="h-5 w-5 text-white transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1" />
+          </div>
+          <span className="font-display text-[1.2rem] font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
+            PrepPath
+          </span>
+      </Link> */}
+      
 
       {/* Clerk SignUp — appearance overrides to match theme */}
       <div className="relative z-10">
