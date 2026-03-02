@@ -4,7 +4,7 @@ import Courses from './_components/Courses'
 
 function WorkspacePage() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-1 flex-col gap-6">
       {/* Dashboard specific components go here! */}
       <WelcomeBanner />
       <Courses />

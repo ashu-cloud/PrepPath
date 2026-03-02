@@ -7,16 +7,19 @@ import CourseInfo from '../_components/courseinfo'
 import ChapterTopicList from '../_components/ChapterTopicList'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useUser } from '@clerk/nextjs'
 
 function EditCourse() {
     const { courseId } = useParams()
     const router = useRouter()
+    const { user } = useUser()
     const [loading, setLoading] = useState(false);
     const [courseData, setCourseData] = useState<any>(null);
     
     // New states for our buttons
     const [hasContent, setHasContent] = useState(false);
     const [isFullyGenerated, setIsFullyGenerated] = useState(false);
+    const [isEnrolling, setIsEnrolling] = useState(false);
 
     useEffect(() => {
         if (!courseId) return;
@@ -64,6 +67,31 @@ function EditCourse() {
         )
     }
 
+    const handleStartCourse = async () => {
+        // Check if the current user is the owner
+        const isOwner = courseData?.userEmail === user?.primaryEmailAddress?.emailAddress;
+
+        if (isOwner) {
+            // If already owned, just go to study
+            router.push(`/workspace/study/${courseId}`);
+        } else {
+            // If NOT owned, enroll (clone) first
+            setIsEnrolling(true);
+            try {
+                const res = await axios.post('/api/enroll-course', {
+                    sourceCid: courseId
+                });
+                // Redirect to the NEWly created course study page
+                router.push(`/workspace/study/${res.data.newCid}`);
+            } catch (err) {
+                console.error("Enrollment failed", err);
+                alert("Failed to add course to your list.");
+            } finally {
+                setIsEnrolling(false);
+            }
+        }
+    };
+
     return (
         <div className="mx-auto max-w-6xl p-6 md:p-10">
             {/* 1. TOP NAVIGATION & HEADER */}
@@ -85,7 +113,7 @@ function EditCourse() {
                      {/* --- START COURSE BUTTON LOGIC --- */}
                      {hasContent ? (
                          <Button 
-                            onClick={() => router.push(`/workspace/study/${courseId}`)}
+                            onClick={handleStartCourse}
                             className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-2 px-6 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all hover:scale-105"
                          >
                              <PlayCircle className="h-4 w-4" /> Start Course

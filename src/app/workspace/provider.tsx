@@ -7,7 +7,7 @@ function WorkspaceProvider({children}: {children: React.ReactNode}) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <div className="flex min-h-screen w-full flex-col bg-[#070708]">
+      <div className="flex  min-h-screen w-full flex-col bg-[#070708]">
         {/* The Header stays here so it shows on every page */}
         <AppHeader />
         

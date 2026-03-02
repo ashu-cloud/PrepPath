@@ -50,6 +50,10 @@ function AddNewCourseDialogue({ children }: { children: React.ReactNode }) {
       setErrorMessage("Please fill out all required fields.");
       return;
     }
+    if (formData.numberOfModules < 1 || formData.numberOfModules > 15) {
+      setErrorMessage("Please select between 1 and 15 modules.");
+      return;
+    }
 
     setLoading(true);
     setErrorMessage(""); // Clear any previous errors

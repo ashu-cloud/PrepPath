@@ -5,6 +5,8 @@ import { Sparkles, BookOpen, ChevronRight, Plus, CheckCircle2, PlayCircle } from
 import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import axios from 'axios'
+import { Button } from '@/components/ui/button'
+import AddNewCourseDialogue from './AddNewCourseDialogue'
 
 interface Course {
   id: string
@@ -76,19 +78,38 @@ function CourseCard({ course }: { course: Course }) {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] py-20 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02] text-2xl">📭</div>
-      <h3 className="mb-2 font-display text-[1rem] font-bold text-white/60">No courses yet</h3>
-      <p className="mb-6 max-w-[280px] text-[0.82rem] leading-relaxed text-white/25">
-        Generate your first AI course tailored to your knowledge level and start learning today.
-      </p>
-      <Link href="/workspace/create" className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 px-5 py-2.5 text-[0.82rem] font-semibold text-white transition-all hover:-translate-y-px hover:shadow-[0_8px_30px_rgba(139,92,246,0.35)]">
-        <Sparkles className="h-3.5 w-3.5" /> Generate your first course
-      </Link>
+    <div className="relative mt-4 flex min-h-[500px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-dashed border-white/[0.08] bg-white/[0.01] px-6 py-20 text-center">
+      
+      {/* Background Glows */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-sky-500/5 blur-[80px]" />
+
+      <div className="relative mb-8">
+        <div className="flex h-24 w-24 animate-bounce items-center justify-center rounded-[2rem] border border-white/10 bg-[#13131a] text-5xl shadow-2xl shadow-violet-500/10">
+          🚀
+        </div>
+        <div className="absolute -right-2 -top-2 h-6 w-6 animate-pulse rounded-full bg-violet-500/20 blur-sm" />
+      </div>
+
+      <div className="relative z-10 max-w-sm">
+        <h3 className="mb-3 font-display text-2xl font-bold tracking-tight text-white">
+            Your Dashboard is <span className="text-violet-400 italic font-medium tracking-normal">Awaiting Orders</span>
+        </h3>
+        <p className="mb-10 text-[0.9rem] leading-relaxed text-white/30 font-light">
+            You haven't architected any courses yet. Turn your curiosity into a structured learning roadmap in seconds.
+        </p>
+      </div>
+
+      <AddNewCourseDialogue>
+        <Button className="group relative h-12 overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 px-8 text-sm font-bold text-white shadow-[0_0_30px_rgba(139,92,246,0.3)] transition-all hover:-translate-y-1 hover:shadow-[0_0_50px_rgba(139,92,246,0.5)] active:scale-95">
+          <Sparkles className="h-4 w-4 mr-2 transition-transform group-hover:rotate-12" />
+          Generate My First Course
+          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
+        </Button>
+      </AddNewCourseDialogue>
     </div>
   )
 }
-
 function Courses() {
   const { user } = useUser()
   const [courseList, setCourseList] = React.useState<Course[]>([])
