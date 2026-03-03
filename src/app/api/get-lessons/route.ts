@@ -1,34 +1,53 @@
 import { NextResponse } from "next/server";
 import db from "@/config/db";
-import { chaptersContentTable } from "@/config/schema";
-import { eq } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
+import { chaptersContentTable, chapterProgressTable } from "@/config/schema";
+import { eq, and } from "drizzle-orm";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 export async function GET(req: Request) {
     try {
-        // 1. Verify the user is logged in
+        const { searchParams } = new URL(req.url);
+        const courseId = searchParams.get("courseId");
         const { userId } = await auth();
-        if (!userId) {
+        const user = await currentUser();
+
+        if (!courseId) return NextResponse.json({ error: "Missing CID" }, { status: 400 });
+        if (!userId || !user?.primaryEmailAddress?.emailAddress) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // 2. Extract the courseId from the URL (e.g., ?courseId=123)
-        const { searchParams } = new URL(req.url);
-        const courseId = searchParams.get('courseId');
+        const userEmail = user.primaryEmailAddress.emailAddress;
 
-        if (!courseId) {
-            return NextResponse.json({ error: "Course ID is required" }, { status: 400 });
-        }
+        // 🚀 THE CRITICAL FIX: Left Join the progress table
+        const lessons = await db.select({
+            id: chaptersContentTable.id,
+            chapterId: chaptersContentTable.chapterId,
+            content: chaptersContentTable.content,
+            videoId: chaptersContentTable.videoId,
+            // Select the completion status from the progress table
+            isCompleted: chapterProgressTable.isCompleted 
+        })
+        .from(chaptersContentTable)
+        .leftJoin(
+            chapterProgressTable, 
+            and(
+                eq(chapterProgressTable.courseCid, courseId),
+                eq(chapterProgressTable.userEmail, userEmail),
+                eq(chapterProgressTable.chapterId, chaptersContentTable.chapterId)
+            )
+        )
+        .where(eq(chaptersContentTable.cid, courseId))
+        .orderBy(chaptersContentTable.chapterId);
 
-        // 3. Query Neon for all lessons attached to this course
-        const lessons = await db.select()
-            .from(chaptersContentTable)
-            .where(eq(chaptersContentTable.cid, courseId));
+        // Standardize the boolean value (handle nulls from the Left Join)
+        const standardizedLessons = lessons.map(lesson => ({
+            ...lesson,
+            isCompleted: !!lesson.isCompleted // Force to true/false
+        }));
 
-        return NextResponse.json(lessons, { status: 200 });
-
+        return NextResponse.json(standardizedLessons);
     } catch (error) {
-        console.error("Failed to fetch lessons:", error);
-        return NextResponse.json({ error: "Failed to fetch lessons" }, { status: 500 });
+        console.error("API Error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

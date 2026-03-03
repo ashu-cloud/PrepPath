@@ -111,30 +111,29 @@ function EditCourse() {
                      </span>
                      
                      {/* --- START COURSE BUTTON LOGIC --- */}
-                     {hasContent ? (
-                         <Button 
-                            onClick={handleStartCourse}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-2 px-6 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all hover:scale-105"
-                         >
-                             <PlayCircle className="h-4 w-4" /> Start Course
-                         </Button>
-                     ) : (
-                         <TooltipProvider>
-                             <Tooltip>
-                                 {/* We wrap the disabled button in a div so hover events still trigger the tooltip */}
-                                 <TooltipTrigger asChild>
-                                     <div className="cursor-not-allowed">
-                                         <Button disabled className="bg-emerald-900/40 text-emerald-500/50 font-bold gap-2 px-6 rounded-xl pointer-events-none">
-                                             <PlayCircle className="h-4 w-4" /> Start Course
-                                         </Button>
-                                     </div>
-                                 </TooltipTrigger>
-                                 <TooltipContent side="bottom" className="bg-[#0f0f12] text-white border border-white/10 shadow-2xl">
-                                     <p>Generate the course first</p>
-                                 </TooltipContent>
-                             </Tooltip>
-                         </TooltipProvider>
-                     )}
+                     {isFullyGenerated ? (
+                            <Button 
+                                onClick={handleStartCourse}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-2 px-6 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all hover:scale-105"
+                            >
+                                <PlayCircle className="h-4 w-4" /> Start Course
+                            </Button>
+                        ) : (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="cursor-not-allowed">
+                                            <Button disabled className="bg-emerald-900/40 text-emerald-500/50 font-bold gap-2 px-6 rounded-xl pointer-events-none">
+                                                <PlayCircle className="h-4 w-4" /> Start Course
+                                            </Button>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="bg-[#0f0f12] text-white border border-white/10 shadow-2xl">
+                                        <p>Generate the entire course first</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                 </div>
             </div>
 

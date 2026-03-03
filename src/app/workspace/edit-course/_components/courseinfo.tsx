@@ -71,6 +71,28 @@ function CourseInfo({ courseData, isFullyGenerated, onGenerationComplete }: any)
         setLoading(false);
     }
 
+    let totalDurationHours = 0;
+    if (courseLayout?.chapters) {
+        courseLayout.chapters.forEach((ch: any) => {
+            // Look for numbers in the AI's "duration" string
+            const match = ch.duration?.match(/\d+/);
+            if (match) {
+                // If the AI said "30 minutes", let's count it as 0.5 hours roughly
+                if (ch.duration.toLowerCase().includes("min")) {
+                    totalDurationHours += (parseInt(match[0], 10) / 60);
+                } else {
+                    totalDurationHours += parseInt(match[0], 10);
+                }
+            } else {
+                totalDurationHours += 1; // Default to 1 hour per chapter if parsing fails
+            }
+        });
+    } else {
+        // Fallback if courseLayout isn't ready
+        totalDurationHours = (courseData?.numberOfModules || 5) * 1;
+    }
+    const finalDuration = Math.max(1, Math.round(totalDurationHours * 10) / 10);
+
     return (
         <div className="bg-[#0f0f12] rounded-2xl border border-white/[0.05] overflow-hidden shadow-2xl">
             {/* 1. Hero Image Section */}
@@ -110,7 +132,7 @@ function CourseInfo({ courseData, isFullyGenerated, onGenerationComplete }: any)
                             </div>
                             <div>
                                 <h2 className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Duration</h2>
-                                <span className="text-white text-sm font-semibold">2 Hours</span>
+                                <span className="text-white text-sm font-semibold">{finalDuration} Hours</span>
                             </div>
                         </div>
 

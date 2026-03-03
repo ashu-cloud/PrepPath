@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import db from "@/config/db";
 import { chaptersContentTable } from "@/config/schema";
 import youtubeSearchApi from "youtube-search-api";
+import { eq, and } from "drizzle-orm"; // Added for idempotency check
 
 const geminiKey = process.env.GEMINI_API_KEY;
 if (!geminiKey) {
@@ -21,6 +22,26 @@ export const POST = async (req: Request) => {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
+        // --- 1. IDEMPOTENCY CHECK (Resumability) ---
+        // If a user refreshes the page mid-way, this checks if the chapter was already generated
+        const existingChapter = await db.select()
+            .from(chaptersContentTable)
+            .where(and(
+                eq(chaptersContentTable.cid, courseId),
+                eq(chaptersContentTable.chapterId, Number(index))
+            ));
+
+        // If it exists, immediately return the cached content
+        if (existingChapter.length > 0) {
+            console.log(`Chapter ${index} already exists. Skipping generation. Resuming...`);
+            return NextResponse.json({ 
+                success: true, 
+                content: existingChapter[0].content, 
+                videoId: existingChapter[0].videoId 
+            });
+        }
+        // -------------------------------------------
+
         const prompt = `Generate highly detailed educational content in HTML format for the topic: "${topic}" 
         under the chapter "${chapterName}" for the course "${courseName}". 
         Include code examples, bullet points, and clear explanations. 
@@ -38,29 +59,26 @@ export const POST = async (req: Request) => {
                 console.error("Detected DATABASE_URL with api host, this will fail:", process.env.DATABASE_URL);
             }
 
-            // 1. Ask Gemini for the Text
+            // Ask Gemini for the Text
             const response = await ai.models.generateContent({
                 model: process.env.GEMINI_CONTENT_MODEL || "gemini-2.5-flash",
                 contents: prompt,
             });
             htmlContent = response.text ?? "";
 
-            // 2. SMART YouTube Search (Filters out Ads, Pranks, and Channels)
+            // SMART YouTube Search
             try {
-                // Create a highly specific educational query
                 const safeCourseName = courseName || "Computer Science";
                 const searchQuery = `${safeCourseName} ${topic} tutorial explanation`;
                 
-                // Fetch the top 5 results so we have options to filter through
                 const ytResults = await youtubeSearchApi.GetListByKeyword(searchQuery, false, 5);
                 
                 if (ytResults && ytResults.items) {
-                    // Filter the results to ONLY grab real, standalone videos (no playlists or ads)
                     const validVideo = ytResults.items.find((item: any) => {
                         return (
-                            item.type === "video" && // Must be a video (not a channel)
-                            item.id && // Must have a valid ID
-                            item.length?.simpleText // Must have a time length (Ads usually don't have this in scrapes)
+                            item.type === "video" && 
+                            item.id && 
+                            item.length?.simpleText 
                         );
                     });
 
@@ -70,7 +88,6 @@ export const POST = async (req: Request) => {
                 }
             } catch (ytError) {
                 console.error("YouTube Fetch Failed:", ytError);
-                // We DO NOT throw an error here. If YouTube fails, we still want to save the AI text!
             }
 
         } catch (error: any) {
@@ -86,7 +103,7 @@ export const POST = async (req: Request) => {
             throw error; 
         }
 
-        // 3. Save Both to Neon Database
+        // Save Both to Neon Database
         await db.insert(chaptersContentTable).values({
             cid: courseId,
             chapterId: Number(index),

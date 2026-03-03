@@ -1,23 +1,58 @@
 import { NextResponse } from "next/server";
-import db from "@/config/db"; // (Update to "@/conifg/db" if your folder has the typo!)
-import { chaptersContentTable } from "@/config/schema";
+import db from "@/config/db"; 
+import { chapterProgressTable } from "@/config/schema";
 import { eq, and } from "drizzle-orm";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { revalidateTag } from "next/cache"; 
 
 export async function POST(req: Request) {
     try {
         const { courseId, chapterId } = await req.json();
+        
+        const { userId } = await auth();
+        const user = await currentUser();
+
+        if (!userId || !user?.primaryEmailAddress?.emailAddress) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
 
         if (!courseId || chapterId == null) {
             return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
         }
 
-        // Update the specific chapter to isCompleted = true
-        await db.update(chaptersContentTable)
-            .set({ isCompleted: true })
+        const userEmail = user.primaryEmailAddress.emailAddress;
+
+        // 1. Update/Insert progress in DB
+        const existingProgress = await db.select()
+            .from(chapterProgressTable)
             .where(and(
-                eq(chaptersContentTable.cid, courseId),
-                eq(chaptersContentTable.chapterId, chapterId)
+                eq(chapterProgressTable.userEmail, userEmail),
+                eq(chapterProgressTable.courseCid, courseId),
+                eq(chapterProgressTable.chapterId, chapterId)
             ));
+
+        if (existingProgress.length > 0) {
+            await db.update(chapterProgressTable)
+                .set({ isCompleted: true })
+                .where(eq(chapterProgressTable.id, existingProgress[0].id));
+        } else {
+            await db.insert(chapterProgressTable).values({
+                userEmail: userEmail,
+                courseCid: courseId,
+                chapterId: chapterId,
+                isCompleted: true
+            });
+        }
+
+        
+        try {
+            // @ts-ignore - In case your local types are mismatched with standard Next.js
+            revalidateTag(`courses-${userEmail}`, "page");
+            // @ts-ignore
+            revalidateTag(`profile-${userEmail}`, "page");
+        } catch (e) {
+            console.error("Cache revalidation failed, but DB updated:", e);
+        }
 
         return NextResponse.json({ success: true });
 

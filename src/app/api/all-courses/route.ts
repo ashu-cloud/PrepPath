@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import db from "@/config/db"; 
 import { coursesTable } from "@/config/schema"; 
-import { desc, eq } from "drizzle-orm"; // Add eq
+import { desc, isNotNull } from "drizzle-orm"; 
+
+export const revalidate = 30; 
 
 export async function GET() {
     try {
-        
         const allCourses = await db.select()
             .from(coursesTable)
-            .where(eq(coursesTable.isCloned, false)) 
+            .where(isNotNull(coursesTable.courseJson)) 
             .orderBy(desc(coursesTable.id));
 
         return NextResponse.json(allCourses);

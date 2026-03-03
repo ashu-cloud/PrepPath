@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import db from "@/config/db";
-import { coursesTable } from "@/config/schema";
+import { coursesTable, enrollmentsTable } from "@/config/schema"; // Ensure enrollmentsTable is imported
 import { ilike } from "drizzle-orm";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { v4 as uuidv4 } from "uuid";
@@ -61,11 +61,9 @@ export const POST = async (req: Request) => {
         const { userId } = await auth();
         const user = await currentUser();
         
-        
         console.log("CLERK USER ID:", userId);
         console.log("CLERK EMAIL:", user?.primaryEmailAddress?.emailAddress);
 
-        // 3. Updated Auth Guard with better error messages
         if (!userId) {
             return NextResponse.json({ error: "Clerk did not send a session cookie to the backend." }, { status: 401 });
         }
@@ -75,17 +73,6 @@ export const POST = async (req: Request) => {
         }
 
         const safeUserEmail = user.primaryEmailAddress.emailAddress;
-
-
-        // 🛑 AUTH GUARD: Prevent the Foreign Key Crash
-        if (!user || !user.primaryEmailAddress?.emailAddress) {
-            return NextResponse.json(
-                { error: "Unauthorized. Please log in to generate a course." }, 
-                { status: 401 }
-            );
-        }
-
-      
 
         // Check for existing course to prevent duplicates
         const existingCourse = await db
@@ -135,11 +122,9 @@ export const POST = async (req: Request) => {
                 console.warn(`AI request attempt ${attempt} failed:`, gErr?.message || gErr);
                 const isQuota = gErr?.status === 429 || gErr?.code === 429 || String(gErr?.message).includes('QuotaFailure') || String(gErr?.message).toLowerCase().includes('rate limit');
                 if (isQuota) {
-                    // If quota exhausted, return 429 immediately
                     return NextResponse.json({ error: 'AI quota exceeded, try again later.' }, { status: 429 });
                 }
                 if (attempt === maxAttempts) throw gErr;
-                // exponential backoff before retry
                 const delayMs = 1000 * Math.pow(2, attempt);
                 await new Promise((r) => setTimeout(r, delayMs));
             }
@@ -147,13 +132,9 @@ export const POST = async (req: Request) => {
 
         let generatedCourse;
         try {
-            // 1. Strip out markdown blocks just in case Gemini hallucinates them
             let cleanJsonText = response.text.replace(/```json/g, "").replace(/```/g, "");
-            
-            // 2. Parse the cleaned JSON
             generatedCourse = JSON.parse(cleanJsonText);
         } catch (parseError) {
-            // 3. If it STILL fails, log exactly what Gemini generated so you can see the typo
             console.log("🔥 BROKEN JSON RESPONSE FROM AI:", response.text);
             throw new Error("The AI generated invalid course data. Please click Generate again.");
         }
@@ -161,16 +142,14 @@ export const POST = async (req: Request) => {
        let finalImageUrl = "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1080&auto=format&fit=crop"; 
 
         try {
-            // We use the course category (e.g., "frontend", "python", "design") to search Unsplash
             const searchQuery = encodeURIComponent(`${formData.category} technology`);
-            
             const unsplashResponse = await fetch(
                 `https://api.unsplash.com/photos/random?query=${searchQuery}&orientation=landscape&client_id=${process.env.UNSPLASH_ACCESS_KEY}`
             );
 
             if (unsplashResponse.ok) {
                 const unsplashData = await unsplashResponse.json();
-                finalImageUrl = unsplashData.urls.regular; // Grabs the perfectly sized image URL
+                finalImageUrl = unsplashData.urls.regular; 
                 console.log("✅ Successfully grabbed Unsplash image:", finalImageUrl);
             } else {
                 console.warn("⚠️ Unsplash API missed, using default fallback image.");
@@ -179,11 +158,12 @@ export const POST = async (req: Request) => {
         } catch (imageError) {
             console.error("⚠️ Unsplash fetch error:", imageError);
         }
-        // Insert into database
+
+        const newCid = uuidv4();
+
+        // 1. Insert into courses table
         const [insertedCourse] = await db.insert(coursesTable).values({
-          
-            cid: uuidv4(), 
-            
+            cid: newCid, 
             name: formData.courseName,
             description: formData.courseDescription || "",
             numberOfModules: Number(formData.numberOfModules),
@@ -191,14 +171,17 @@ export const POST = async (req: Request) => {
             category: formData.category,
             includeVideo: Boolean(formData.includeLectures),
             courseJson: response.text, 
-            
             userEmail: safeUserEmail, 
-            bannerImage: finalImageUrl, // Save the Cloudinary URL to your database
+            bannerImage: finalImageUrl, 
+            status: 'ready' // Marking as ready since we are generating synchronously
         }).returning();
 
-        // include both the numeric PK and the UUID identifier so the
-        // frontend can decide which to use.  The UI prefers `cid` because
-        // that's what all other API calls are querying by.
+        // 2. 🚀 NEW: Auto-enroll the creator!
+        await db.insert(enrollmentsTable).values({
+            userEmail: safeUserEmail,
+            courseCid: newCid
+        });
+
         return NextResponse.json({
             dbId: insertedCourse.id,
             cid: insertedCourse.cid,
