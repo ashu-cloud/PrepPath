@@ -34,6 +34,7 @@ const SideBarOptions = [
   { title: "AI Tools",       icon: PencilRulerIcon, link: "/workspace/ai-tools" },
   { title: "Billing",        icon: Wallet,          link: "/workspace/billing" },
   { title: "Profile",        icon: UserCircle2Icon, link: "/workspace/profile" },
+  { title: "feedback",   icon: Sparkles,       link: "/workspace/feedback" },
 ]
 
 export function AppSidebar() {
