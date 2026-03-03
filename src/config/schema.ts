@@ -20,7 +20,9 @@ export const coursesTable = pgTable("courses", {
   courseJson: json(),
   userEmail: varchar('userEmail'), //.references(() => usersTable.email).notNull()
   bannerImage: varchar("banner_image",{ length: 255 }).default(""),
-  isCloned: boolean().default(false) // New field to indicate if this course is a cloned version
+  isCloned: boolean().default(false), // New field to indicate if this course is a cloned version
+  status: varchar({ length: 50 }).default("pending").notNull(),
+
 });
 
 
