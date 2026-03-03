@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import db from "@/config/db";
-import { coursesTable, enrollmentsTable } from "@/config/schema"; // Ensure enrollmentsTable is imported
+import { coursesTable, enrollmentsTable } from "@/config/schema"; 
 import { ilike } from "drizzle-orm";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { v4 as uuidv4 } from "uuid";
@@ -13,42 +13,46 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET 
 });
 
-const Prompt = `You are an elite Instructional Designer. Your objective is to architect a world-class, premium learning curriculum.
+const Prompt = `You are an expert Instructional Designer building a personalized course curriculum.
 
-### 1. THE LEARNER'S PROFILE:
-* Course Target: {courseName}
-* Learner's Goal: {courseDescription}
-* Category: {category}
-* Difficulty: {difficultyLevel}
-* Modules: {numberOfModules}
-* Video: {includeLectures}
+### LEARNER PROFILE:
+- Topic: {courseName}
+- Goal: {courseDescription}
+- Category: {category}
+- Level: {difficultyLevel}
+- Number of chapters: {numberOfModules}
+- Include video suggestions: {includeLectures}
 
-### 2. PEDAGOGY GUIDELINES:
-* IF BEGINNER: Focus on foundational analogies and quick wins. 
-* IF INTERMEDIATE: Focus on industry tooling and best practices.
-* IF ADVANCED: Dive straight into complex architecture and system design.
-* You MUST generate exactly {numberOfModules} chapters.
-* Frame chapterNames and topics as active, exciting achievements.
+### PERSONALIZATION RULES (CRITICAL):
+- BEGINNER: Assume zero prior knowledge. Start from first principles. Use analogies. Build confidence with quick wins.
+- INTERMEDIATE: Assume the learner knows the basics. DO NOT explain fundamentals. Jump straight to real-world patterns, industry tooling, and best practices.
+- ADVANCED: Assume strong working knowledge. Skip all introductory content. Focus exclusively on edge cases, system design, performance, and production concerns.
 
-### 3. OUTPUT CONSTRAINTS (CRITICAL):
-You must respond STRICTLY with valid JSON. Do not include markdown formatting blocks (like \`\`\`json). Do not use unescaped quotation marks inside your strings. Failure to provide perfectly formatted JSON will crash the application.
+The curriculum must respect the learner's level. An advanced learner should never see a chapter they already know.
 
-EXPECTED EXACT JSON STRUCTURE:
+### OUTPUT RULES:
+- Generate EXACTLY {numberOfModules} chapters. No more, no less.
+- Respond with VALID JSON only. No markdown. No backticks. No prose before or after.
+- Do not use unescaped quotes inside string values.
+
+### REQUIRED JSON STRUCTURE:
 {
   "course": {
-    "name": "Catchy premium title",
-    "description": "Compelling 2-sentence hook",
+    "name": "A specific, compelling course title",
+    "description": "Two sentences: what this course teaches and what the learner can do after completing it.",
     "category": "{category}",
     "level": "{difficultyLevel}",
     "includeVideo": {includeLectures},
     "noOfChapters": {numberOfModules},
     "chapters": [
       {
-        "chapterName": "Name of the chapter",
-        "duration": "Scale based on difficulty (e.g., 2 Hours)",
+        "chapterName": "Specific, outcome-oriented chapter title",
+        "about": "One sentence describing exactly what this chapter covers and why it matters at this level.",
+        "duration": "Estimated time to complete (e.g., 45 Minutes, 1.5 Hours)",
         "topics": [
-          "Topic 1",
-          "Topic 2"
+          "Specific topic 1",
+          "Specific topic 2",
+          "Specific topic 3"
         ]
       }
     ]

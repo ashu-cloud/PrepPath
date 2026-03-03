@@ -3,6 +3,7 @@ import { UserButton, SignOutButton } from '@clerk/nextjs'
 import { currentUser } from '@clerk/nextjs/server'
 import { LogOut } from 'lucide-react'
 import React from 'react'
+import HeaderJoke from './HeaderJokes'
 
 async function AppHeader() {
   const user = await currentUser()
@@ -28,6 +29,8 @@ async function AppHeader() {
         </div>
       </div>
 
+      <HeaderJoke />
+
       {/* --- Right: User Profile & Actions --- */}
       <div className='flex items-center gap-4 sm:gap-5'>
         
@@ -40,7 +43,7 @@ async function AppHeader() {
           </span>
         </div>
 
-        <div className='flex items-center justify-center rounded-full ring-1 ring-white/10 transition-all hover:ring-white/30'>
+        {/* <div className='flex items-center justify-center rounded-full ring-1 ring-white/10 transition-all hover:ring-white/30'>
           <UserButton
             appearance={{
               elements: {
@@ -48,7 +51,7 @@ async function AppHeader() {
               }
             }}
           />
-        </div>
+        </div> */}
 
         <div className='hidden h-4 w-px bg-white/[0.08] sm:block' />
 
