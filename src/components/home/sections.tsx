@@ -338,8 +338,8 @@ export function Footer() {
       <span className="font-display font-extrabold text-white/60">PrepPath</span>
       <span>© 2026 PrepPath. Built by Ashu Panchal.</span>
       <div className="flex gap-5">
-        {["Privacy", "Terms", "GitHub"].map((l) => (
-          <a key={l} href="#" className="transition-colors hover:text-white">
+        {["Privacy", "GitHub"].map((l) => (
+          <a key={l} href="https://github.com/ashu-cloud/PrepPath" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-white">
             {l}
           </a>
         ))}
