@@ -1,7 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
-
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+import { generateWithFallback } from "@/config/ai-provider";
 
 export async function POST(req: Request) {
     try {
@@ -18,14 +16,18 @@ export async function POST(req: Request) {
         2. A list of specific improvements made.
         3. Complexity analysis (Time and Space).`;
 
-        const result = await genAI.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
+        const { text, provider } = await generateWithFallback({
+            prompt,
+            systemMsg: "You are an expert senior software engineer. Respond in clean Markdown format. Use markdown headings (##, ###), markdown code blocks (```language), bullet points, and numbered lists. Do NOT use HTML tags like <h2>, <pre>, <code>, <ul>, <li>, etc. Pure Markdown only.",
         });
+        console.log(`Refactor tool used provider: ${provider}`);
         
-        return NextResponse.json({ result: result.text });
-    } catch (error) {
+        return NextResponse.json({ result: text });
+    } catch (error: any) {
         console.error("Refactor API Error:", error);
-        return NextResponse.json({ error: "Failed to refactor code" }, { status: 500 });
+        const msg = error?.message?.includes("daily quota") || error?.message?.includes("All AI providers")
+            ? error.message
+            : "Failed to refactor code";
+        return NextResponse.json({ error: msg }, { status: 500 });
     }
 }

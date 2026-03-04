@@ -1,10 +1,13 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
-import { Search, Sparkles, BookOpen, ChevronRight, Globe, Filter } from 'lucide-react'
+import React, { useState, useCallback } from 'react'
+import { Search, Sparkles, BookOpen, ChevronRight, Globe, Filter, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import axios from 'axios'
+import useSWR from 'swr'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+
+const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 interface Course {
   cid: string
@@ -16,35 +19,48 @@ interface Course {
 }
 
 export default function ExplorePage() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [extraCourses, setExtraCourses] = useState<Course[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  useEffect(() => {
-  const fetchAllCourses = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get('/api/all-courses');
-      
-      // Ensure we received an array
-      if (Array.isArray(res.data)) {
-        setCourses(res.data);
-      } else {
-        console.error("API did not return an array:", res.data);
-        setCourses([]);
-      }
-    } catch (error) {
-      console.error("Failed to fetch explore courses:", error);
-      setCourses([]); // Set to empty array to prevent .map() crash
-    } finally {
-      setLoading(false);
+  // SWR caches page 1 — dedupes requests within 30s, revalidates on focus
+  const { data, error, isLoading } = useSWR(
+    '/api/all-courses?page=1',
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      dedupingInterval: 30000,
     }
-  };
-  fetchAllCourses();
-}, []);
+  );
+
+  const loading = isLoading;
+  // Derive page-1 courses directly from SWR data (works from cache too)
+  const page1Courses: Course[] = data?.courses ?? [];
+  const allCourses = [...page1Courses, ...extraCourses];
+  const currentHasMore = extraCourses.length > 0 ? hasMore : (data?.hasMore ?? false);
+
+  const handleLoadMore = useCallback(async () => {
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/all-courses?page=${nextPage}`);
+      const result = await res.json();
+      if (result?.courses) {
+        setExtraCourses(prev => [...prev, ...result.courses]);
+        setHasMore(result.hasMore ?? false);
+        setPage(nextPage);
+      }
+    } catch (err) {
+      console.error("Failed to load more courses:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [page]);
 
   // Filter logic for search
-  const filteredCourses = courses.filter(course => 
+  const filteredCourses = allCourses.filter(course => 
     course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     course.category?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -127,6 +143,27 @@ export default function ExplorePage() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* --- LOAD MORE BUTTON --- */}
+      {!loading && currentHasMore && !searchQuery && (
+        <div className="mt-10 flex justify-center">
+          <Button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            variant="outline"
+            className="rounded-xl border-white/10 bg-white/[0.03] px-8 py-6 text-sm font-bold text-white hover:bg-violet-500/10 hover:border-violet-500/30 hover:text-violet-400 transition-all duration-300"
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              "More Courses"
+            )}
+          </Button>
         </div>
       )}
     </div>

@@ -18,7 +18,10 @@ export async function GET(req: Request) {
                 result = await db.select().from(coursesTable).where(eq(coursesTable.cid, courseId));
             }
             if (result.length === 0) return NextResponse.json({ error: "Course not found" }, { status: 404 });
-            return NextResponse.json(result[0]);
+            const res = NextResponse.json(result[0]);
+            // Public course data — cache for 60s, serve stale while revalidating
+            res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=120");
+            return res;
         }
 
         // --- 2. HANDLE ALL USER COURSES FETCH (For Dashboard & My Learning) ---
@@ -81,7 +84,10 @@ export async function GET(req: Request) {
             // Sort by most recently interacted/created (newest first)
             enrichedCourses.reverse();
 
-            return NextResponse.json(enrichedCourses);
+            const res = NextResponse.json(enrichedCourses);
+            // User-specific — private cache, short TTL
+            res.headers.set("Cache-Control", "private, max-age=10, stale-while-revalidate=30");
+            return res;
         }
 
         return NextResponse.json({ error: "Missing courseId or email" }, { status: 400 });

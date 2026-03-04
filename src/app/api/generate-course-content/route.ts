@@ -1,29 +1,208 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import db from "@/config/db";
 import { chaptersContentTable } from "@/config/schema";
 import youtubeSearchApi from "youtube-search-api";
-import { eq, and } from "drizzle-orm"; // Added for idempotency check
+import { eq, and } from "drizzle-orm";
+import { generateWithFallback } from "@/config/ai-provider";
 
-const geminiKey = process.env.GEMINI_API_KEY;
-if (!geminiKey) {
-    throw new Error("Missing GEMINI_API_KEY environment variable");
+// ── Parse YouTube duration string like "12:34" or "1:02:30" into seconds ───
+function parseDuration(durationStr: string): number {
+    if (!durationStr) return 0;
+    const parts = durationStr.split(":").map(Number);
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return parts[0] || 0;
 }
 
-const ai = new GoogleGenAI({
-    apiKey: geminiKey,
-});
+// ── Fetch a YouTube video ID matching a chapter heading (non-fatal) ────────
+async function fetchVideoId(courseName: string, chapterName: string, topic: string): Promise<string> {
+    // Try most-specific query first, then broaden
+    const queries = [
+        `${chapterName} ${courseName} tutorial`,      // e.g. "Goroutines and Channels Go Lang tutorial"
+        `${chapterName} programming tutorial`,          // drop course name
+        `${courseName} ${topic} explained`,             // fallback to topic keyword
+    ];
+
+    for (const searchQuery of queries) {
+        try {
+            const ytResults = await youtubeSearchApi.GetListByKeyword(searchQuery, false, 10);
+            if (!ytResults?.items) continue;
+
+            // Filter: must be a real video (not Short, not livestream), 2+ minutes long
+            const validVideo = ytResults.items.find((item: any) => {
+                if (item.type !== "video" || !item.id) return false;
+                const duration = item.length?.simpleText || "";
+                const seconds = parseDuration(duration);
+                // Skip Shorts (<60s), very long videos (>45min), and missing duration
+                if (seconds < 120 || seconds > 2700) return false;
+                // Skip if title contains "#shorts" or "short"
+                const title = (item.title || "").toLowerCase();
+                if (title.includes("#shorts") || title.includes("#short")) return false;
+                return true;
+            });
+
+            if (validVideo) {
+                console.log(`YouTube match for "${chapterName}": "${validVideo.title}" (${validVideo.length?.simpleText})`);
+                return validVideo.id;
+            }
+        } catch (ytError) {
+            console.error(`YouTube search failed for query "${searchQuery}":`, ytError);
+        }
+    }
+
+    console.warn(`No suitable YouTube video found for chapter: "${chapterName}"`);
+    return "";
+}
+
+// ── POST handler — supports single chapter OR batch ────────────────────────
+// Batch mode uses a SINGLE Gemini API call for ALL chapters (saves quota).
+export const maxDuration = 300; // allow up to 5 min for batch generation
 
 export const POST = async (req: Request) => {
     try {
-        const { chapterName, topic, courseId, index, courseName } = await req.json();
+        const body = await req.json();
+
+        // ══════════════════════════════════════════════════════════════════
+        // BATCH MODE — ONE Gemini call for ALL chapters (saves daily quota)
+        // ══════════════════════════════════════════════════════════════════
+        if (body.chapters && Array.isArray(body.chapters)) {
+            const { chapters, courseId, courseName } = body;
+            if (!courseId || !courseName || chapters.length === 0) {
+                return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+            }
+
+            // Figure out which chapters still need generating
+            const toGenerate: Array<{ chapterName: string; topic: string; index: number }> = [];
+            const alreadyDone: number[] = [];
+
+            for (const ch of chapters) {
+                const idx = ch.index ?? chapters.indexOf(ch);
+                const existing = await db.select()
+                    .from(chaptersContentTable)
+                    .where(and(
+                        eq(chaptersContentTable.cid, courseId),
+                        eq(chaptersContentTable.chapterId, idx)
+                    ));
+                if (existing.length > 0) {
+                    alreadyDone.push(idx);
+                } else {
+                    toGenerate.push({ chapterName: ch.chapterName, topic: ch.topic, index: idx });
+                }
+            }
+
+            // Stream progress via newline-delimited JSON
+            const encoder = new TextEncoder();
+            const stream = new ReadableStream({
+                async start(controller) {
+                    const send = (data: object) => {
+                        controller.enqueue(encoder.encode(JSON.stringify(data) + "\n"));
+                    };
+
+                    // Report already-done chapters immediately
+                    for (const idx of alreadyDone) {
+                        send({ type: "progress", chapter: idx, total: chapters.length, status: "skipped" });
+                    }
+
+                    if (toGenerate.length === 0) {
+                        send({ type: "done", results: alreadyDone.map(i => ({ index: i, status: "skipped" })) });
+                        controller.close();
+                        return;
+                    }
+
+                    // Build ONE prompt that asks Gemini for all remaining chapters
+                    const chapterList = toGenerate.map((ch, i) =>
+                        `CHAPTER_${i} (index=${ch.index}): "${ch.chapterName}" — topic: "${ch.topic}"`
+                    ).join("\n");
+
+                    const batchPrompt = `You are generating educational content for the course "${courseName}".
+Generate highly detailed HTML content for EACH of the following ${toGenerate.length} chapters.
+
+${chapterList}
+
+CRITICAL OUTPUT FORMAT:
+- Separate each chapter's content with this exact delimiter on its own line:
+  ===CHAPTER_SEPARATOR===
+- Output chapters in the EXACT order listed above.
+- Each chapter must include: headings, explanations, bullet points, and code examples.
+- Use proper HTML tags: <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>.
+- Wrap ALL code snippets in <pre><code class="language-[name]">...</code></pre>.
+- Raw HTML only — no <html>, <body>, no markdown fences, no chapter labels/headers before content.
+- Do NOT include the separator before the first chapter or after the last chapter.
+
+Begin generating all ${toGenerate.length} chapters now:`;
+
+                    try {
+                        // Report that generation is starting for all remaining chapters
+                        for (const ch of toGenerate) {
+                            send({ type: "progress", chapter: ch.index, total: chapters.length, status: "generating" });
+                        }
+
+                        // ★ SINGLE AI CALL for all chapters (with fallback) ★
+                        console.log(`Generating ${toGenerate.length} chapters in ONE AI call...`);
+                        // Scale tokens by chapter count: ~3K per chapter, capped at 32K
+                        const batchMaxTokens = Math.min(toGenerate.length * 3000, 32000);
+                        const { text: fullText, provider } = await generateWithFallback({ prompt: batchPrompt, maxTokens: batchMaxTokens });
+                        send({ type: "info", message: `Using provider: ${provider}` });
+                        const chapterContents = fullText.split("===CHAPTER_SEPARATOR===").map((s: string) => s.trim());
+
+                        console.log(`Gemini returned ${chapterContents.length} sections for ${toGenerate.length} chapters.`);
+
+                        const results: Array<{ index: number; status: string; error?: string }> = [
+                            ...alreadyDone.map(i => ({ index: i, status: "skipped" }))
+                        ];
+
+                        // Save each chapter to DB + fetch YouTube videos
+                        for (let i = 0; i < toGenerate.length; i++) {
+                            const ch = toGenerate[i];
+                            const htmlContent = chapterContents[i] || "";
+
+                            if (!htmlContent) {
+                                console.warn(`Chapter ${ch.index} got empty content from batch response.`);
+                                results.push({ index: ch.index, status: "error", error: "Empty content from AI" });
+                                send({ type: "progress", chapter: ch.index, total: chapters.length, status: "error", error: "Empty content" });
+                                continue;
+                            }
+
+                            const videoId = await fetchVideoId(courseName, ch.chapterName, ch.topic);
+
+                            await db.insert(chaptersContentTable).values({
+                                cid: courseId,
+                                chapterId: ch.index,
+                                content: htmlContent,
+                                videoId,
+                            });
+
+                            results.push({ index: ch.index, status: "ok" });
+                            send({ type: "progress", chapter: ch.index, total: chapters.length, status: "ok" });
+                        }
+
+                        send({ type: "done", results });
+                    } catch (error: any) {
+                        console.error("Batch generation failed:", error?.message);
+                        send({ type: "error", error: error?.message || "Generation failed" });
+                    }
+
+                    controller.close();
+                },
+            });
+
+            return new Response(stream, {
+                headers: {
+                    "Content-Type": "application/x-ndjson",
+                    "Cache-Control": "no-cache",
+                    "Transfer-Encoding": "chunked",
+                },
+            });
+        }
+
+        // ── Single chapter mode (backwards compatible) ─────────────────────
+        const { chapterName, topic, courseId, index, courseName } = body;
 
         if (!chapterName || !topic || !courseId || index == null) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // --- 1. IDEMPOTENCY CHECK (Resumability) ---
-        // If a user refreshes the page mid-way, this checks if the chapter was already generated
+        // Idempotency check
         const existingChapter = await db.select()
             .from(chaptersContentTable)
             .where(and(
@@ -31,18 +210,16 @@ export const POST = async (req: Request) => {
                 eq(chaptersContentTable.chapterId, Number(index))
             ));
 
-        // If it exists, immediately return the cached content
         if (existingChapter.length > 0) {
-            console.log(`Chapter ${index} already exists. Skipping generation. Resuming...`);
-            return NextResponse.json({ 
-                success: true, 
-                content: existingChapter[0].content, 
-                videoId: existingChapter[0].videoId 
+            return NextResponse.json({
+                success: true,
+                content: existingChapter[0].content,
+                videoId: existingChapter[0].videoId,
             });
         }
-        // -------------------------------------------
 
-        const prompt = `Generate highly detailed educational content in HTML format for the topic: "${topic}" 
+        try {
+            const prompt = `Generate highly detailed educational content in HTML format for the topic: "${topic}" 
         under the chapter "${chapterName}" for the course "${courseName}". 
         Include code examples, bullet points, and clear explanations. 
         
@@ -51,70 +228,38 @@ export const POST = async (req: Request) => {
         2. IMPORTANT: Wrap ALL code snippets strictly inside <pre><code class="language-[name]">...</code></pre> tags (replace [name] with the language like cpp, javascript, python).
         3. Response must be raw HTML without <html> or <body> tags.`;
 
-        let htmlContent = "";
-        let videoId = "";
+            const { text: htmlContent, provider } = await generateWithFallback({ prompt });
+            console.log(`Single chapter generated via ${provider}`);
+            const videoId = await fetchVideoId(courseName, chapterName, topic);
 
-        try {
-            if (process.env.DATABASE_URL?.includes("api.")) {
-                console.error("Detected DATABASE_URL with api host, this will fail:", process.env.DATABASE_URL);
-            }
-
-            // Ask Gemini for the Text
-            const response = await ai.models.generateContent({
-                model: process.env.GEMINI_CONTENT_MODEL || "gemini-2.5-flash",
-                contents: prompt,
+            await db.insert(chaptersContentTable).values({
+                cid: courseId,
+                chapterId: Number(index),
+                content: htmlContent,
+                videoId,
             });
-            htmlContent = response.text ?? "";
 
-            // SMART YouTube Search
-            try {
-                const safeCourseName = courseName || "Computer Science";
-                const searchQuery = `${safeCourseName} ${topic} tutorial explanation`;
-                
-                const ytResults = await youtubeSearchApi.GetListByKeyword(searchQuery, false, 5);
-                
-                if (ytResults && ytResults.items) {
-                    const validVideo = ytResults.items.find((item: any) => {
-                        return (
-                            item.type === "video" && 
-                            item.id && 
-                            item.length?.simpleText 
-                        );
-                    });
-
-                    if (validVideo) {
-                        videoId = validVideo.id;
-                    }
-                }
-            } catch (ytError) {
-                console.error("YouTube Fetch Failed:", ytError);
-            }
-
+            return NextResponse.json({ success: true, content: htmlContent, videoId });
         } catch (error: any) {
-            console.error("API Error (Gemini):", error);
-            const isQuota = error?.status === 429 || error?.message?.includes("Quota");
-            if (isQuota) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
-
+            console.error("Gemini API error:", error);
+            const isRateLimit =
+                error?.status === 429 ||
+                error?.message?.includes("Quota") ||
+                error?.message?.includes("Too Many") ||
+                error?.message?.includes("RESOURCE_EXHAUSTED");
+            if (isRateLimit) {
+                return NextResponse.json({ error: "Rate limit exceeded. Please try again shortly." }, { status: 429 });
+            }
             if (error?.status === 404 && String(error?.message).includes("model")) {
                 return NextResponse.json({
-                    error: "Gemini model not found. Check GEMINI_CONTENT_MODEL or update to a supported model name."
+                    error: "Gemini model not found. Check GEMINI_CONTENT_MODEL env variable.",
                 }, { status: 500 });
             }
-            throw error; 
+            throw error;
         }
-
-        // Save Both to Neon Database
-        await db.insert(chaptersContentTable).values({
-            cid: courseId,
-            chapterId: Number(index),
-            content: htmlContent,
-            videoId: videoId,
-        });
-
-        return NextResponse.json({ success: true, content: htmlContent, videoId });
 
     } catch (error: any) {
         console.error("Lesson generation failed:", error);
         return NextResponse.json({ error: "Failed to generate lesson" }, { status: 500 });
     }
-}
+};

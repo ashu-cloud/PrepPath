@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import db from "@/config/db";
 import { coursesTable, enrollmentsTable } from "@/config/schema"; 
@@ -6,6 +5,7 @@ import { ilike } from "drizzle-orm";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { v4 as uuidv4 } from "uuid";
 import { v2 as cloudinary } from 'cloudinary';
+import { generateWithFallback } from "@/config/ai-provider";
 
 cloudinary.config({ 
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
@@ -92,14 +92,7 @@ export const POST = async (req: Request) => {
             );
         }
 
-        // Initialize AI and guard API key
-        const geminiKey = process.env.GEMINI_API_KEY;
-        if (!geminiKey) {
-            return NextResponse.json({ error: "Missing GEMINI_API_KEY" }, { status: 500 });
-        }
-        const ai = new GoogleGenAI({ apiKey: geminiKey });
-
-        // Use replaceAll to ensure all template tags are filled
+        // Build prompt from template
         const finalPrompt = Prompt
             .replaceAll("{courseName}", formData.courseName || "General Topic")
             .replaceAll("{courseDescription}", formData.courseDescription || "")
@@ -108,38 +101,21 @@ export const POST = async (req: Request) => {
             .replaceAll("{numberOfModules}", String(formData.numberOfModules || 5))
             .replaceAll("{includeLectures}", String(formData.includeLectures || false));
 
-        // Generate Content with retry/backoff for transient failures
-        const maxAttempts = 3;
-        let response: any = null;
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                response = await ai.models.generateContent({
-                    model: process.env.GEMINI_CONTENT_MODEL || "gemini-2.5-flash",
-                    contents: finalPrompt,
-                    config: { responseMimeType: "application/json" }
-                });
-                if (!response || !response.text) {
-                    throw new Error("Empty AI response");
-                }
-                break; // success
-            } catch (gErr: any) {
-                console.warn(`AI request attempt ${attempt} failed:`, gErr?.message || gErr);
-                const isQuota = gErr?.status === 429 || gErr?.code === 429 || String(gErr?.message).includes('QuotaFailure') || String(gErr?.message).toLowerCase().includes('rate limit');
-                if (isQuota) {
-                    return NextResponse.json({ error: 'AI quota exceeded, try again later.' }, { status: 429 });
-                }
-                if (attempt === maxAttempts) throw gErr;
-                const delayMs = 1000 * Math.pow(2, attempt);
-                await new Promise((r) => setTimeout(r, delayMs));
-            }
-        }
+        // Generate course layout with AI (multi-key Gemini + Groq fallback)
+        const { text: aiResponseText, provider } = await generateWithFallback({
+            prompt: finalPrompt,
+            jsonMode: true,
+            systemMsg: "You are an expert Instructional Designer. Respond with valid JSON only. No markdown, no code fences, no prose outside the JSON.",
+            geminiConfig: { responseMimeType: "application/json" },
+        });
+        console.log(`Course layout generated via ${provider}`);
 
         let generatedCourse;
         try {
-            let cleanJsonText = response.text.replace(/```json/g, "").replace(/```/g, "");
+            let cleanJsonText = aiResponseText.replace(/```json/g, "").replace(/```/g, "");
             generatedCourse = JSON.parse(cleanJsonText);
         } catch (parseError) {
-            console.log("🔥 BROKEN JSON RESPONSE FROM AI:", response.text);
+            console.log("BROKEN JSON RESPONSE FROM AI:", aiResponseText);
             throw new Error("The AI generated invalid course data. Please click Generate again.");
         }
 
@@ -174,7 +150,7 @@ export const POST = async (req: Request) => {
             difficultyLevel: formData.difficultyLevel,
             category: formData.category,
             includeVideo: Boolean(formData.includeLectures),
-            courseJson: response.text, 
+            courseJson: aiResponseText, 
             userEmail: safeUserEmail, 
             bannerImage: finalImageUrl, 
             status: 'ready' // Marking as ready since we are generating synchronously

@@ -17,55 +17,80 @@ function CourseInfo({ courseData, isFullyGenerated, onGenerationComplete }: any)
 
     const onGenerateContent = async () => {
         setLoading(true);
-        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
         const chapters = courseLayout.chapters;
-        const maxRetries = 3;
-        
-        for (let i = 0; i < chapters.length; i++) {
-            const chapter = chapters[i];
-            let retries = 0;
-            
-            while (retries <= maxRetries) {
-                try {
-                    setCurrentGenerating(i + 1);
-                    console.log(`Baking Chapter ${i + 1} (Attempt ${retries + 1})...`);
-                    
-                    const response = await fetch('/api/generate-course-content', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        courseName: courseLayout?.name || courseData?.name || "Technology",
-                        chapterName: chapter.chapterName,
-                        topic: chapter.topics[0], 
-                        courseId: courseData.cid,
-                        index: i
-                    })
-                });
 
-                    if (response.status === 429) {
-                        retries++;
-                        if (retries > maxRetries) {
-                            console.error(`Chapter ${i + 1} rate-limited ${maxRetries} times, skipping.`);
-                            break; // Move to next chapter
+        // Build batch payload — one request for ALL chapters
+        const payload = {
+            courseName: courseLayout?.name || courseData?.name || "Technology",
+            courseId: courseData.cid,
+            chapters: chapters.map((ch: any, i: number) => ({
+                chapterName: ch.chapterName,
+                topic: ch.topics[0],
+                index: i,
+            })),
+        };
+
+        try {
+            const response = await fetch('/api/generate-course-content', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok || !response.body) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            // Read streamed newline-delimited JSON for progress updates
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || ""; // keep incomplete line in buffer
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const msg = JSON.parse(line);
+                        if (msg.type === "progress") {
+                            setCurrentGenerating(msg.chapter + 1);
+                            if (msg.status === "ok") {
+                                console.log(`✅ Chapter ${msg.chapter + 1} complete.`);
+                            } else if (msg.status === "skipped") {
+                                console.log(`⏭️ Chapter ${msg.chapter + 1} already exists, skipped.`);
+                            } else if (msg.status === "error") {
+                                console.error(`❌ Chapter ${msg.chapter + 1} failed: ${msg.error}`);
+                            } else {
+                                console.log(`⏳ Generating Chapter ${msg.chapter + 1}/${msg.total}...`);
+                            }
+                        } else if (msg.type === "done") {
+                            const failed = msg.results?.filter((r: any) => r.status === "error")?.length || 0;
+                            if (failed > 0) {
+                                console.warn(`Generation finished with ${failed} failed chapter(s). You may have hit your daily API quota. Try again tomorrow.`);
+                            } else {
+                                console.log("🎉 All chapters generated successfully!");
+                            }
+                        } else if (msg.type === "error") {
+                            const isQuota = msg.error?.includes("Quota") || msg.error?.includes("PerDay") || msg.error?.includes("RESOURCE_EXHAUSTED");
+                            if (isQuota) {
+                                console.error("❌ Daily Gemini API quota exhausted (20 requests/day on free tier). Try again tomorrow or upgrade your API plan.");
+                            } else {
+                                console.error(`❌ Generation failed: ${msg.error}`);
+                            }
                         }
-                        const waitMs = 30000 + (retries * 5000); // Increase wait time per retry
-                        console.warn(`Rate limit hit! Waiting ${waitMs / 1000}s before retry ${retries}...`);
-                        await sleep(waitMs);
-                        continue; // Retry this chapter
-                    }
-
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                    console.log(`✅ Chapter ${i + 1} complete.`);
-                    await sleep(2000); // Brief cooldown before next chapter
-                    break; // Success - move to next chapter
-                    
-                } catch (err) {
-                    console.error(`Chapter ${i + 1} error:`, err);
-                    break; // Move to next chapter on non-rate-limit errors
+                    } catch { /* skip malformed line */ }
                 }
             }
+        } catch (err) {
+            console.error("Course generation error:", err);
         }
+
         if (onGenerationComplete) onGenerationComplete();
         setCurrentGenerating(null);
         setLoading(false);

@@ -3,7 +3,7 @@ import db from "@/config/db";
 import { chapterProgressTable } from "@/config/schema";
 import { eq, and } from "drizzle-orm";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { revalidateTag } from "next/cache"; 
+import { revalidatePath } from "next/cache"; 
 
 export async function POST(req: Request) {
     try {
@@ -44,12 +44,10 @@ export async function POST(req: Request) {
             });
         }
 
-        
+        // 2. Revalidate cached pages so progress is reflected
         try {
-            // @ts-ignore - In case your local types are mismatched with standard Next.js
-            revalidateTag(`courses-${userEmail}`, "page");
-            // @ts-ignore
-            revalidateTag(`profile-${userEmail}`, "page");
+            revalidatePath("/workspace");
+            revalidatePath(`/workspace/study/${courseId}`);
         } catch (e) {
             console.error("Cache revalidation failed, but DB updated:", e);
         }

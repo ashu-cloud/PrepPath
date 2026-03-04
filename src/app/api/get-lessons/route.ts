@@ -45,7 +45,10 @@ export async function GET(req: Request) {
             isCompleted: !!lesson.isCompleted // Force to true/false
         }));
 
-        return NextResponse.json(standardizedLessons);
+        const res = NextResponse.json(standardizedLessons);
+        // Short cache — lessons rarely change, but progress can update
+        res.headers.set("Cache-Control", "private, max-age=10, stale-while-revalidate=30");
+        return res;
     } catch (error) {
         console.error("API Error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
