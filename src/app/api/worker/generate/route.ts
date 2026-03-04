@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateCourseLayoutAI } from "@/config/AiModel"; //
+import { generateWithAI } from "@/config/AiModel";
 import db from "@/config/db";
 import { coursesTable } from "@/config/schema";
 import { eq } from "drizzle-orm";
@@ -67,8 +67,7 @@ export async function POST(req: Request) {
             .replaceAll("{includeLectures}", String(includeLectures || false));
 
         // 3. Generate AI Content
-        const aiResponse = await generateCourseLayoutAI.sendMessage(finalPrompt);
-        const rawText = aiResponse.response.text();
+        const rawText = await generateWithAI(finalPrompt);
         const cleanJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
         const courseJson = JSON.parse(cleanJson);
 
