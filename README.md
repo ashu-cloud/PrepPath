@@ -1,4 +1,3 @@
-```markdown
 <div align="center">
   <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/rocket.svg" alt="PrepPath Logo" width="80" height="80" />
   <h1 align="center">PrepPath</h1>
@@ -19,7 +18,7 @@
 
 <hr />
 
-## 🚀 Live Demo
+## � Live Demo
 
 **Check out the live application here:**
 [**https://prep-path-gfxslfq30-ashupanchal8360-6347s-projects.vercel.app/**](https://prep-path-gfxslfq30-ashupanchal8360-6347s-projects.vercel.app/)
@@ -28,7 +27,7 @@ Explore the community courses, sign up for a free account, and generate your ver
 
 ---
 
-## 🌟 Overview
+## �🌟 Overview
 
 **PrepPath** is an intelligent, highly-scalable, AI-driven educational platform designed to completely automate the creation of structured learning paths. Built on top of the robust Next.js 16 App Router and powered by Google Gemini (with seamless Groq fallbacks for high availability), PrepPath allows learners to type literally any topic—from "System Design Fundamentals" to "TypeScript Generics" to "The History of Rome"—and instantly generate a deep, multi-chapter curriculum tailored exactly to their selected difficulty level.
 
@@ -74,10 +73,12 @@ PrepPath leverages the modern bleeding-edge ecosystem of the React/TypeScript en
 - **Framework:** Next.js 16.1.6 (App Router) - Leveraging Server Components for direct database querying and Client Components for rich interactivity.
 - **Library:** React 19.2.3 & ReactDOM 19.2.3
 - **Styling:** Tailwind CSS v4 - Utilizing utility-first styling with custom CSS variables for easy dark-mode theming.
-- **Component Libraries:** - Shadcn UI (Accessible, customizable Radix primitives)
+- **Component Libraries:** 
+  - Shadcn UI (Accessible, customizable Radix primitives)
   - Radix UI
   - Base UI
-- **Animation Engine:** - Framer Motion 12.34.3 (For layout animations, gestures, and scrolling effects)
+- **Animation Engine:** 
+  - Framer Motion 12.34.3 (For layout animations, gestures, and scrolling effects)
   - GSAP 3.14.2
 
 ### Database & Backend
@@ -89,7 +90,8 @@ PrepPath leverages the modern bleeding-edge ecosystem of the React/TypeScript en
 ### AI & External APIs
 - **Primary LLM:** Google Gemini (`@google/genai`) - Specifically `gemini-2.5-flash` for blazing fast structured JSON generation.
 - **Fallback LLM:** LLaMA-3 via Groq (`groq-sdk`) - Specifically `llama-3.3-70b-versatile`.
-- **Media Assets:** - Unsplash API - Fetching dynamic, high-res cover photography based on course categories.
+- **Media Assets:** 
+  - Unsplash API - Fetching dynamic, high-res cover photography based on course categories.
 - **Video:** YouTube Search API - For contextual lecture embedding.
 
 ---
@@ -155,20 +157,19 @@ A brief look into how the repository is architected:
 ├── drizzle.config.ts             # Drizzle Kit Configuration specifying schema location
 ├── components.json               # Shadcn-UI component specification
 └── tailwind.config.ts            # Tailwind styling configs & plugin injection
-
 ```
 
 ---
 
-## 📊 Database Schema Details (Drizzle ORM)
+## � Database Schema Details (Drizzle ORM)
 
 PrepPath uses a clean, normalized relational model optimized for rapid querying and upserting:
 
-* **`usersTable`**: Core identities synced headlessly from Clerk webhooks. Has columns for `name`, `email` (primary identifier), and `subscriptionId`.
-* **`coursesTable`**: Metadata for the generated layout. Contains the UUID `cid`, raw `courseJson` from the AI, categories, difficulty, boolean flags, and the Unsplash `bannerImage`.
-* **`chaptersContentTable`**: The heavy lifter. Maps to a specific `courseCid` and `chapterId`. Stores massive strings of generated markdown/HTML (`content`) and the localized `videoId`.
-* **`enrollmentsTable`**: A many-to-many junction table explicitly mapping a `userEmail` to a `courseCid`. This allows an unlimited number of users to "clone" or adopt courses they did not generate themselves into their personal library.
-* **`chapterProgressTable`**: Tracks granular user completion. Maps a `userEmail` and `courseCid` to a specific `chapterId` alongside a boolean `isCompleted` flag.
+- **`usersTable`**: Core identities synced headlessly from Clerk webhooks. Has columns for `name`, `email` (primary identifier), and `subscriptionId`.
+- **`coursesTable`**: Metadata for the generated layout. Contains the UUID `cid`, raw `courseJson` from the AI, categories, difficulty, boolean flags, and the Unsplash `bannerImage`.
+- **`chaptersContentTable`**: The heavy lifter. Maps to a specific `courseCid` and `chapterId`. Stores massive strings of generated markdown/HTML (`content`) and the localized `videoId`.
+- **`enrollmentsTable`**: A many-to-many junction table explicitly mapping a `userEmail` to a `courseCid`. This allows an unlimited number of users to "clone" or adopt courses they did not generate themselves into their personal library.
+- **`chapterProgressTable`**: Tracks granular user completion. Maps a `userEmail` and `courseCid` to a specific `chapterId` alongside a boolean `isCompleted` flag.
 
 ---
 
@@ -177,31 +178,25 @@ PrepPath uses a clean, normalized relational model optimized for rapid querying 
 Follow these detailed steps to run the PrepPath ecosystem locally on your machine.
 
 ### Prerequisites
-
-* Node.js (v18.x or later)
-* npm or yarn or pnpm
-* A free Neon PostgreSQL Database URL
-* API keys for Google Gemini, Groq, Clerk, and Unsplash.
+- Node.js (v18.x or later)
+- npm or yarn or pnpm
+- A free Neon PostgreSQL Database URL
+- API keys for Google Gemini, Groq, Clerk, and Unsplash.
 
 ### 1. Clone the repository
-
 ```bash
-git clone [https://github.com/your-username/PrepPath.git](https://github.com/your-username/PrepPath.git)
+git clone https://github.com/your-username/PrepPath.git
 cd PrepPath
-
 ```
 
 ### 2. Install Dependencies
-
 ```bash
 npm install
 # or
 yarn install
-
 ```
 
 ### 3. Environment Variables setup
-
 Create a `.env` file in the root directory. You can copy the structure from `.env.example` if it exists, or manually create it based on the following template:
 
 ```env
@@ -229,27 +224,22 @@ UNSPLASH_ACCESS_KEY="your_unsplash_key"
 # --- OPTIONAL OVERRIDES ---
 # GEMINI_CONTENT_MODEL="gemini-2.5-flash"
 # GROQ_MODEL="llama-3.3-70b-versatile"
-
 ```
 
 ### 4. Push the Database Schema
-
 Before running the app, you need to instantiate the tables in your Neon database. Drizzle Kit will read `src/config/schema.ts` and push the necessary SQL commands directly.
 
 ```bash
 npx drizzle-kit push
-
 ```
 
 ### 5. Start the Development Server
-
 Fire up the Next.js development server.
 
 ```bash
 npm run dev
 # or
 yarn dev
-
 ```
 
 Navigate to `http://localhost:3000` in your browser to view the application.
@@ -277,7 +267,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ---
 
 <p align="center">
-Built with ❤️ by Ashu Panchal.
+  Built with ❤️ by Ashu Panchal.
 </p>
-
-```
