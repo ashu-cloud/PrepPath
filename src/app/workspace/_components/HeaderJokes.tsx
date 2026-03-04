@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Lightbulb } from "lucide-react"
 
 const JOKES = [
+  // --- Original Programming Jokes ---
   "Why do programmers prefer dark mode? Light attracts bugs. 🐛",
   "A SQL query walks into a bar and asks two tables: 'Can I join you?'",
   "Why do Java developers wear glasses? Because they don't C#.",
@@ -29,7 +30,34 @@ const JOKES = [
   "How many programmers does it take to change a light bulb? None — that's a hardware problem.",
   "Why did the React dev go to therapy? Too many unresolved props.",
   "Git push origin main... and pray. 🙏",
-]
+
+  // --- New General & Clever Jokes ---
+  "I told my wife she was drawing her eyebrows too high. She looked surprised.",
+  "Why don't scientists trust atoms? Because they make up everything!",
+  "Parallel lines have so much in common. It's a shame they'll never meet.",
+  "Did you hear about the mathematician who's afraid of negative numbers? He'll stop at nothing to avoid them.",
+  "What do you call fake spaghetti? An impasta.",
+  "Why did the scarecrow win an award? Because he was outstanding in his field.",
+  "I'm reading a book on anti-gravity. I just can't put it down.",
+  "Why do melons have weddings? Because they cantaloupe.",
+  "What do you call a bear with no teeth? A gummy bear.",
+  "I used to play piano by ear, but now I use my hands.",
+  "Why did the math book look sad? Because of all of its problems.",
+  "I told my doctor that I broke my arm in two places. He told me to stop going to those places.",
+  "What did the left eye say to the right eye? Between you and me, something smells.",
+  "How does a penguin build its house? Igloos it together.",
+  "What do you call a magic dog? A labracadabrador.",
+  "Did you hear about the claustrophobic astronaut? He just needed a little space.",
+  "I invented a new word! Plagiarism!",
+  "Why don't skeletons fight each other? They don't have the guts.",
+  "What has a wealth of knowledge but no voice? A library.",
+  "Why did the coffee file a police report? It got mugged.",
+  "How do you organize a space party? You planet.",
+  "What's the best thing about Switzerland? I don't know, but the flag is a big plus.",
+  "I'm terrified of elevators, so I'm going to start taking steps to avoid them.",
+  "Why did the bicycle fall over? Because it was two-tired.",
+  "What do you call a factory that makes okay products? A satisfactory."
+];
 
 export default function HeaderJoke() {
   const [joke, setJoke] = useState("")

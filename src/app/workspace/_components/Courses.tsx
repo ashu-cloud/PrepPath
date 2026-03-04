@@ -46,7 +46,8 @@ function CourseCard({ course, refreshData }: { course: any, refreshData?: () => 
   };
 
   return (
-    <div className="relative group">
+    // Added h-full here so the grid cells stretch
+    <div className="relative group h-full">
       {!isPending && (
         <button 
           onClick={handleDelete}
@@ -78,18 +79,20 @@ function CourseCard({ course, refreshData }: { course: any, refreshData?: () => 
 
       <Link
         href={isPending ? "#" : `/workspace/study/${course.id}`}
-        className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-[#13131a] p-6 transition-all duration-300 ${
+        // Added h-full here so the card stretches to fill the height of the grid row
+        className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-[#13131a] p-6 transition-all duration-300 ${
           isPending ? "pointer-events-none" : "hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
         } ${
           isFinished ? "border-emerald-500/20 hover:border-emerald-500/40" : "border-white/[0.07] hover:border-violet-500/30"
         }`}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
-          {/* FIXED: Removed corrupted characters and used standard icons */}
-          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg ${
-              course.isCloned ? "bg-violet-500/20 shadow-[0_0_15px_rgba(139,92,246,0.2)] text-violet-400" : (isFinished ? "bg-emerald-500/10 text-emerald-400" : "bg-violet-500/[0.1] text-violet-400")
-          }`}>
-            {course.isCloned ? <BookOpen className="h-5 w-5" /> : (isFinished ? <CheckCircle2 className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />)}
+          <div className="flex flex-col items-start gap-1.5">
+              <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg ${
+                  course.isCloned ? "bg-violet-500/20 shadow-[0_0_15px_rgba(139,92,246,0.2)] text-violet-400" : (isFinished ? "bg-emerald-500/10 text-emerald-400" : "bg-violet-500/[0.1] text-violet-400")
+              }`}>
+                {course.isCloned ? <BookOpen className="h-5 w-5" /> : (isFinished ? <CheckCircle2 className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />)}
+              </div>
           </div>
           <div className="flex flex-col items-end gap-1.5">
               {course.level && (
@@ -137,13 +140,13 @@ function CourseCard({ course, refreshData }: { course: any, refreshData?: () => 
 }
 
 function EmptyState() {
+  // ... (EmptyState component remains exactly the same as yours)
   return (
-    <div className="relative mt-4 flex min-h-[500px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-dashed border-white/[0.08] bg-white/[0.01] px-6 py-20 text-center">
+    <div className="relative mt-4 flex min-h-[500px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-dashed border-white/[0.08] bg-white/[0.01] px-6 py-20 text-center w-full">
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/10 blur-[100px]" />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-sky-500/5 blur-[80px]" />
 
       <div className="relative mb-8">
-        {/* FIXED: Removed corrupted Unicode character */}
         <div className="flex h-24 w-24 animate-bounce items-center justify-center rounded-[2rem] border border-white/10 bg-[#13131a] shadow-2xl shadow-violet-500/10">
           <BookOpen className="h-10 w-10 text-violet-500" />
         </div>
@@ -172,7 +175,6 @@ function EmptyState() {
 
 
 function Courses() {
-  // FIXED: Destructure isLoaded from Clerk
   const { user, isLoaded } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress;
 
@@ -185,12 +187,10 @@ function Courses() {
       }
   );
 
-  // FIXED: Block rendering until Clerk is fully loaded AND SWR has tried fetching
   if (!isLoaded || (email && isLoading)) {
     return <div className="flex h-40 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-violet-500" /></div>;
   }
 
-  // If fully loaded and no email/data, show empty state
   if (error || !data || data.length === 0) return <EmptyState />;
 
   const courseList = data.map((c: any) => ({
@@ -207,7 +207,8 @@ function Courses() {
   const completedCourses = courseList.filter((c: any) => c.progress === 100);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    // FIX: Removed `p-6 max-w-7xl mx-auto` and replaced with `w-full`
+    <div className="w-full">
         <div className="space-y-12">
           {activeCourses.length > 0 && (
               <div>
