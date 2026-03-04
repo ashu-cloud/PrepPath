@@ -1,0 +1,8 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Next.js NEXT_PUBLIC_* variables are intentionally inlined into client bundles.
+# They are public by design, so we exclude them from the secrets scanner.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_APP_URL,NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,NEXT_PUBLIC_CLERK_SIGN_IN_URL,NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL,NEXT_PUBLIC_CLERK_SIGN_UP_URL,NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL,NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,NEXT_PUBLIC_GEMINI_API_KEY"
