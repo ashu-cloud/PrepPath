@@ -55,7 +55,7 @@ async function fetchVideoId(courseName: string, chapterName: string, topic: stri
 }
 
 // ── POST handler — supports single chapter OR batch ────────────────────────
-// Batch mode uses a SINGLE Gemini API call for ALL chapters (saves quota).
+// Batch mode: ONE AI call for all chapters (2 total calls per course: layout + content)
 export const maxDuration = 300; // allow up to 5 min for batch generation
 
 export const POST = async (req: Request) => {
@@ -63,7 +63,7 @@ export const POST = async (req: Request) => {
         const body = await req.json();
 
         // ══════════════════════════════════════════════════════════════════
-        // BATCH MODE — ONE Gemini call for ALL chapters (saves daily quota)
+        // BATCH MODE — ONE AI call for ALL chapters
         // ══════════════════════════════════════════════════════════════════
         if (body.chapters && Array.isArray(body.chapters)) {
             const { chapters, courseId, courseName } = body;
@@ -109,43 +109,64 @@ export const POST = async (req: Request) => {
                         return;
                     }
 
-                    // Build ONE prompt that asks Gemini for all remaining chapters
+                    // Build ONE prompt for all chapters
                     const chapterList = toGenerate.map((ch, i) =>
                         `CHAPTER_${i} (index=${ch.index}): "${ch.chapterName}" — topic: "${ch.topic}"`
                     ).join("\n");
 
-                    const batchPrompt = `You are generating educational content for the course "${courseName}".
-Generate highly detailed HTML content for EACH of the following ${toGenerate.length} chapters.
+                    const batchPrompt = `You are a world-class educator writing a premium paid online course called "${courseName}".
+Generate DETAILED, TEXTBOOK-QUALITY HTML content for ALL ${toGenerate.length} chapters below in a SINGLE response.
 
 ${chapterList}
 
-CRITICAL OUTPUT FORMAT:
-- Separate each chapter's content with this exact delimiter on its own line:
-  ===CHAPTER_SEPARATOR===
-- Output chapters in the EXACT order listed above.
-- Each chapter must include: headings, explanations, bullet points, and code examples.
-- Use proper HTML tags: <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>.
-- Wrap ALL code snippets in <pre><code class="language-[name]">...</code></pre>.
-- Raw HTML only — no <html>, <body>, no markdown fences, no chapter labels/headers before content.
-- Do NOT include the separator before the first chapter or after the last chapter.
+FOR EACH CHAPTER, YOU MUST INCLUDE ALL OF THESE SECTIONS:
 
+1. <h2>Introduction</h2>
+   - 1-2 paragraphs: What this topic is and WHY it matters. Include a real-world motivation.
+
+2. MULTIPLE <h2> CONTENT SECTIONS (at least 3-4 per chapter)
+   For each concept:
+   - <h3> sub-heading
+   - 1-2 paragraphs of clear explanation with analogies.
+   - A COMPLETE code example in <pre><code class="language-[name]">...</code></pre>
+   - Brief explanation of what the code does.
+
+3. <h2>Common Mistakes & Pitfalls</h2>
+   - 3-4 common errors with wrong vs correct code examples.
+
+4. <h2>Key Takeaways</h2>
+   - 5-8 bullet points summarizing the chapter.
+
+FORMATTING RULES:
+- Use <h2> for sections, <h3> for sub-sections, <p> for paragraphs, <ul>/<li> for lists.
+- ALL code in <pre><code class="language-[name]">...</code></pre>.
+- Raw HTML only — NO <html>, <body>, NO markdown, NO code fences wrapping the response.
+- Each chapter should be 800-1500 words. Be thorough but focused.
+
+OUTPUT FORMAT:
+- Separate chapters with this EXACT delimiter on its own line: ===CHAPTER_SEPARATOR===
+- Output chapters in the EXACT order listed above.
+- Do NOT include the separator before the first chapter or after the last.
+
+Write like a teacher who genuinely wants students to understand. Be detailed and practical.
 Begin generating all ${toGenerate.length} chapters now:`;
 
                     try {
-                        // Report that generation is starting for all remaining chapters
                         for (const ch of toGenerate) {
                             send({ type: "progress", chapter: ch.index, total: chapters.length, status: "generating" });
                         }
 
-                        // ★ SINGLE AI CALL for all chapters (with fallback) ★
-                        console.log(`Generating ${toGenerate.length} chapters in ONE AI call...`);
-                        // Scale tokens by chapter count: ~3K per chapter, capped at 32K
-                        const batchMaxTokens = Math.min(toGenerate.length * 3000, 32000);
-                        const { text: fullText, provider } = await generateWithFallback({ prompt: batchPrompt, maxTokens: batchMaxTokens });
+                        // ★ SINGLE AI CALL for all chapters ★
+                        console.log(`Generating ${toGenerate.length} chapters in ONE AI call for "${courseName}"...`);
+                        const { text: fullText, provider } = await generateWithFallback({
+                            prompt: batchPrompt,
+                            maxTokens: 32000,
+                            geminiConfig: { maxOutputTokens: 65000 },
+                        });
                         send({ type: "info", message: `Using provider: ${provider}` });
-                        const chapterContents = fullText.split("===CHAPTER_SEPARATOR===").map((s: string) => s.trim());
 
-                        console.log(`Gemini returned ${chapterContents.length} sections for ${toGenerate.length} chapters.`);
+                        const chapterContents = fullText.split("===CHAPTER_SEPARATOR===").map((s: string) => s.trim());
+                        console.log(`AI returned ${chapterContents.length} sections for ${toGenerate.length} chapters via ${provider}.`);
 
                         const results: Array<{ index: number; status: string; error?: string }> = [
                             ...alreadyDone.map(i => ({ index: i, status: "skipped" }))
@@ -156,8 +177,8 @@ Begin generating all ${toGenerate.length} chapters now:`;
                             const ch = toGenerate[i];
                             const htmlContent = chapterContents[i] || "";
 
-                            if (!htmlContent) {
-                                console.warn(`Chapter ${ch.index} got empty content from batch response.`);
+                            if (!htmlContent || htmlContent.length < 100) {
+                                console.warn(`Chapter ${ch.index} got empty/short content.`);
                                 results.push({ index: ch.index, status: "error", error: "Empty content from AI" });
                                 send({ type: "progress", chapter: ch.index, total: chapters.length, status: "error", error: "Empty content" });
                                 continue;

@@ -10,7 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useUser } from '@clerk/nextjs'
 
 function EditCourse() {
-    const { courseId } = useParams()
+    const params = useParams()
+    const courseId = params?.courseId as string
     const router = useRouter()
     const { user } = useUser()
     const [loading, setLoading] = useState(false);
@@ -68,21 +69,24 @@ function EditCourse() {
     }
 
     const handleStartCourse = async () => {
+        const cid = courseData?.cid || courseId;
+        if (!cid) return;
+
         // Check if the current user is the owner
         const isOwner = courseData?.userEmail === user?.primaryEmailAddress?.emailAddress;
 
         if (isOwner) {
             // If already owned, just go to study
-            router.push(`/workspace/study/${courseId}`);
+            router.push(`/workspace/study/${cid}`);
         } else {
             // If NOT owned, enroll (clone) first
             setIsEnrolling(true);
             try {
                 const res = await axios.post('/api/enroll-course', {
-                    sourceCid: courseId
+                    sourceCid: cid
                 });
-                // Redirect to the NEWly created course study page
-                router.push(`/workspace/study/${res.data.newCid}`);
+                // Redirect to the study page
+                router.push(`/workspace/study/${res.data.newCid || cid}`);
             } catch (err) {
                 console.error("Enrollment failed", err);
                 alert("Failed to add course to your list.");
@@ -98,11 +102,11 @@ function EditCourse() {
             <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <Button 
                     variant="ghost" 
-                    onClick={() => router.push('/workspace')}
+                    onClick={() => router.push('/workspace/explore')}
                     className="flex w-fit items-center gap-2 text-gray-400 hover:text-white hover:bg-white/5"
                 >
                     <ChevronLeft className="h-4 w-4" />
-                    Back to Dashboard
+                    Back to More Courses
                 </Button>
                 
                 <div className="flex items-center gap-4">

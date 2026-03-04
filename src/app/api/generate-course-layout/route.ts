@@ -92,13 +92,14 @@ export const POST = async (req: Request) => {
             );
         }
 
-        // Build prompt from template
+        // Build prompt from template (cap modules at 10)
+        const safeModules = Math.min(Math.max(Number(formData.numberOfModules) || 5, 1), 10);
         const finalPrompt = Prompt
             .replaceAll("{courseName}", formData.courseName || "General Topic")
             .replaceAll("{courseDescription}", formData.courseDescription || "")
             .replaceAll("{category}", formData.category || "Technology")
             .replaceAll("{difficultyLevel}", formData.difficultyLevel || "Beginner")
-            .replaceAll("{numberOfModules}", String(formData.numberOfModules || 5))
+            .replaceAll("{numberOfModules}", String(safeModules))
             .replaceAll("{includeLectures}", String(formData.includeLectures || false));
 
         // Generate course layout with AI (multi-key Gemini + Groq fallback)

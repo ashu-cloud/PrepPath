@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/config/db"; 
 import { coursesTable } from "@/config/schema"; 
-import { desc, isNotNull, sql } from "drizzle-orm"; 
+import { desc, isNotNull, sql, ilike, or, and } from "drizzle-orm"; 
 
 export const dynamic = "force-dynamic";
 
@@ -11,18 +11,34 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+        const search = searchParams.get("search")?.trim() || "";
         const offset = (page - 1) * PAGE_SIZE;
+
+        // Base condition: must have courseJson (fully generated)
+        const baseCondition = isNotNull(coursesTable.courseJson);
+
+        // If searching, add name/category/description filters
+        const whereCondition = search
+            ? and(
+                baseCondition,
+                or(
+                    ilike(coursesTable.name, `%${search}%`),
+                    ilike(coursesTable.category, `%${search}%`),
+                    ilike(coursesTable.description, `%${search}%`)
+                )
+              )
+            : baseCondition;
 
         const [courses, countResult] = await Promise.all([
             db.select()
                 .from(coursesTable)
-                .where(isNotNull(coursesTable.courseJson))
+                .where(whereCondition)
                 .orderBy(desc(coursesTable.id))
                 .limit(PAGE_SIZE)
                 .offset(offset),
             db.select({ count: sql<number>`count(*)` })
                 .from(coursesTable)
-                .where(isNotNull(coursesTable.courseJson)),
+                .where(whereCondition),
         ]);
 
         const total = Number(countResult[0]?.count ?? 0);

@@ -50,8 +50,8 @@ function AddNewCourseDialogue({ children }: { children: React.ReactNode }) {
       setErrorMessage("Please fill out all required fields.");
       return;
     }
-    if (formData.numberOfModules < 1 || formData.numberOfModules > 15) {
-      setErrorMessage("Please select between 1 and 15 modules.");
+    if (formData.numberOfModules < 1 || formData.numberOfModules > 10) {
+      setErrorMessage("Please select between 1 and 10 modules.");
       return;
     }
 
@@ -148,8 +148,8 @@ function AddNewCourseDialogue({ children }: { children: React.ReactNode }) {
                 <Input
                   type="number"
                   min="1"
-                  max="15"
-                  placeholder="e.g. 5"
+                  max="10"
+                  placeholder="max-10"
                   className="w-full border-white/[0.07] bg-white/[0.02] text-white placeholder:text-white/20 focus-visible:ring-violet-500"
                   onChange={(e) => onHandleInputChange("numberOfModules", Number(e.target.value))}
                 />

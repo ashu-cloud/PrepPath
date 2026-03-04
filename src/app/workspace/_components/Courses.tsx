@@ -10,6 +10,7 @@ import AddNewCourseDialogue from './AddNewCourseDialogue'
 import useSWR from 'swr'
 
 
+
 const fetcher = (url: string) => axios.get(url).then(res => res.data)
 
 interface Course {
@@ -27,7 +28,7 @@ const levelStyle: Record<string, string> = {
   Advanced:     'border-red-400/30    bg-red-400/[0.06]    text-red-400',
 }
 
-function CourseCard({ course, refreshData }: { course: any, refreshData?: () => void }) {
+function CourseCard({ course, onDelete }: { course: any, onDelete?: (cid: string) => void }) {
   const badgeStyle = course.level && levelStyle[course.level] ? levelStyle[course.level] : 'border-gray-500/30 bg-gray-500/[0.06] text-gray-400';
   const isFinished = course.progress === 100;
   const isPending = course.status === 'pending';
@@ -35,10 +36,13 @@ function CourseCard({ course, refreshData }: { course: any, refreshData?: () => 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm("Are you sure you want to delete this course? This action cannot be undone.")) {
+    const msg = course.isCloned
+      ? "Remove this enrolled course from your library?"
+      : "Are you sure you want to delete this course? This action cannot be undone.";
+    if (confirm(msg)) {
         try {
+            onDelete?.(course.id);  // optimistic UI update
             await axios.delete(`/api/delete-course?cid=${course.id}`);
-            refreshData?.();
         } catch (error) {
             console.error("Delete failed", error);
         }
@@ -48,7 +52,7 @@ function CourseCard({ course, refreshData }: { course: any, refreshData?: () => 
   return (
     // Added h-full here so the grid cells stretch
     <div className="relative group h-full">
-      {!isPending && (
+      {!isPending && course.isCloned && (
         <button 
           onClick={handleDelete}
           className="absolute -right-2 -top-2 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-red-500/20 bg-[#070708] text-red-500 opacity-0 shadow-xl transition-all hover:bg-red-500 hover:text-white group-hover:opacity-100"
@@ -220,7 +224,10 @@ function Courses() {
                       <CourseCard 
                         key={course.id} 
                         course={course} 
-                        refreshData={() => mutate()} 
+                        onDelete={(cid) => mutate(
+                          (cur: any) => cur?.filter((c: any) => c.cid !== cid),
+                          { revalidate: false }
+                        )} 
                       />
                     ))}
                   </div>
@@ -237,7 +244,10 @@ function Courses() {
                       <CourseCard 
                         key={course.id} 
                         course={course} 
-                        refreshData={() => mutate()} 
+                        onDelete={(cid) => mutate(
+                          (cur: any) => cur?.filter((c: any) => c.cid !== cid),
+                          { revalidate: false }
+                        )} 
                       />
                     ))}
                   </div>

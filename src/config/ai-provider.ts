@@ -76,7 +76,9 @@ export async function generateWithFallback(
     const geminiModel = process.env.GEMINI_CONTENT_MODEL || "gemini-2.5-flash";
     const groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
     // Smart token defaults: JSON needs less, HTML content needs more
-    const resolvedMaxTokens = maxTokens ?? (jsonMode ? 4096 : 8192);
+    const resolvedMaxTokens = maxTokens ?? (jsonMode ? 4096 : 16384);
+    // Groq hard limit is 32768 — clamp to stay safe
+    const groqMaxTokens = Math.min(resolvedMaxTokens, 32768);
     const errors: string[] = [];
 
     // ── Try each Gemini key ────────────────────────────────────────────
@@ -168,7 +170,7 @@ MANDATORY OUTPUT REQUIREMENTS — DO NOT IGNORE:
                     { role: "user", content: enhancedPrompt }
                 ],
                 temperature: 0.7,
-                max_tokens: resolvedMaxTokens,
+                max_tokens: groqMaxTokens,
                 ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
             });
             const text = response.choices?.[0]?.message?.content ?? "";

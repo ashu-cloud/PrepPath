@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Search, Sparkles, BookOpen, ChevronRight, Globe, Filter, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import useSWR from 'swr'
@@ -21,13 +21,31 @@ interface Course {
 export default function ExplorePage() {
   const [extraCourses, setExtraCourses] = useState<Course[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // SWR caches page 1 — dedupes requests within 30s, revalidates on focus
+  // Debounce search input — wait 400ms after typing stops before hitting API
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+      // Reset pagination when search changes
+      setExtraCourses([]);
+      setPage(1);
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchQuery]);
+
+  // Build SWR key based on search — searches go to DB, empty loads default page 1
+  const swrKey = debouncedSearch
+    ? `/api/all-courses?page=1&search=${encodeURIComponent(debouncedSearch)}`
+    : '/api/all-courses?page=1';
+
   const { data, error, isLoading } = useSWR(
-    '/api/all-courses?page=1',
+    swrKey,
     fetcher,
     {
       revalidateOnFocus: true,
@@ -36,7 +54,6 @@ export default function ExplorePage() {
   );
 
   const loading = isLoading;
-  // Derive page-1 courses directly from SWR data (works from cache too)
   const page1Courses: Course[] = data?.courses ?? [];
   const allCourses = [...page1Courses, ...extraCourses];
   const currentHasMore = extraCourses.length > 0 ? hasMore : (data?.hasMore ?? false);
@@ -45,7 +62,8 @@ export default function ExplorePage() {
     const nextPage = page + 1;
     setLoadingMore(true);
     try {
-      const res = await fetch(`/api/all-courses?page=${nextPage}`);
+      const searchParam = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
+      const res = await fetch(`/api/all-courses?page=${nextPage}${searchParam}`);
       const result = await res.json();
       if (result?.courses) {
         setExtraCourses(prev => [...prev, ...result.courses]);
@@ -57,13 +75,7 @@ export default function ExplorePage() {
     } finally {
       setLoadingMore(false);
     }
-  }, [page]);
-
-  // Filter logic for search
-  const filteredCourses = allCourses.filter(course => 
-    course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    course.category?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  }, [page, debouncedSearch]);
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto min-h-screen">
@@ -101,7 +113,7 @@ export default function ExplorePage() {
                   <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse border border-white/5" />
               ))}
           </div>
-      ) : filteredCourses.length === 0 ? (
+      ) : allCourses.length === 0 ? (
           <div className="py-20 text-center border border-dashed border-white/10 rounded-3xl">
               <div className="text-4xl mb-4">🔍</div>
               <h3 className="text-white font-bold text-lg">No matches found</h3>
@@ -109,7 +121,7 @@ export default function ExplorePage() {
           </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredCourses.map((course) => (
+          {allCourses.map((course) => (
             <Link
               key={course.cid}
               href={`/workspace/edit-course/${course.cid}`}
@@ -147,7 +159,7 @@ export default function ExplorePage() {
       )}
 
       {/* --- LOAD MORE BUTTON --- */}
-      {!loading && currentHasMore && !searchQuery && (
+      {!loading && currentHasMore && (
         <div className="mt-10 flex justify-center">
           <Button
             onClick={handleLoadMore}
