@@ -21,8 +21,7 @@
 ## � Live Demo
 
 **Check out the live application here:**
-[**https://prep-path-smoky.vercel.app/**](#) *(Replace with your actual deployment link)*
-
+[https://prep-path-smoky.vercel.app/](#) 
 Explore the community courses, sign up for a free account, and generate your very own AI-curated learning path in seconds. 
 
 ---
