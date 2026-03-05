@@ -4,6 +4,17 @@ import { chaptersContentTable } from "@/config/schema";
 import youtubeSearchApi from "youtube-search-api";
 import { eq, and } from "drizzle-orm";
 import { generateWithFallback } from "@/config/ai-provider";
+import { marked } from "marked";
+
+// Convert AI response to clean HTML.
+// Gemini sometimes returns markdown (** bold **, ## headings) despite being
+// asked for HTML. marked.parse() converts any markdown to HTML while
+// transparently passing through content that is already valid HTML.
+function ensureHtml(text: string): string {
+    // Strip outer markdown code fences if the model wrapped the whole response
+    const stripped = text.replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/, "").trim();
+    return marked.parse(stripped) as string;
+}
 
 // ── Parse YouTube duration string like "12:34" or "1:02:30" into seconds ───
 function parseDuration(durationStr: string): number {
@@ -175,7 +186,7 @@ Begin generating all ${toGenerate.length} chapters now:`;
                         // Save each chapter to DB + fetch YouTube videos
                         for (let i = 0; i < toGenerate.length; i++) {
                             const ch = toGenerate[i];
-                            const htmlContent = chapterContents[i] || "";
+                            const htmlContent = ensureHtml(chapterContents[i] || "");
 
                             if (!htmlContent || htmlContent.length < 100) {
                                 console.warn(`Chapter ${ch.index} got empty/short content.`);
@@ -249,8 +260,9 @@ Begin generating all ${toGenerate.length} chapters now:`;
         2. IMPORTANT: Wrap ALL code snippets strictly inside <pre><code class="language-[name]">...</code></pre> tags (replace [name] with the language like cpp, javascript, python).
         3. Response must be raw HTML without <html> or <body> tags.`;
 
-            const { text: htmlContent, provider } = await generateWithFallback({ prompt });
+            const { text: rawContent, provider } = await generateWithFallback({ prompt });
             console.log(`Single chapter generated via ${provider}`);
+            const htmlContent = ensureHtml(rawContent);
             const videoId = await fetchVideoId(courseName, chapterName, topic);
 
             await db.insert(chaptersContentTable).values({
