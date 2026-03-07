@@ -115,7 +115,7 @@ export const POST = async (req: Request) => {
         try {
             let cleanJsonText = aiResponseText.replace(/```json/g, "").replace(/```/g, "");
             generatedCourse = JSON.parse(cleanJsonText);
-        } catch (parseError) {
+        } catch {
             console.log("BROKEN JSON RESPONSE FROM AI:", aiResponseText);
             throw new Error("The AI generated invalid course data. Please click Generate again.");
         }

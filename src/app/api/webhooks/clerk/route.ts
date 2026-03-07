@@ -3,7 +3,6 @@ import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
 import  db from '@/config/db'
 import { usersTable } from '@/config/schema'
-import { eq } from 'drizzle-orm'
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET

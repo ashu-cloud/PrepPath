@@ -6,7 +6,6 @@ import MarqueeSection from "@/components/home/marquee-section";
 import HowItWorks from "@/components/home/how-it-works";
 import CoursesSection from "@/components/home/courses-section";
 import {
-  StatsSection,
   GenerateSection,
   TestimonialsSection,
 

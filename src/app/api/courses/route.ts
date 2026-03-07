@@ -61,7 +61,7 @@ export async function GET(req: Request) {
                     } else {
                         totalChapters = jsonData?.course?.chapters?.length || course.numberOfModules || 0;
                     }
-                } catch (e) { 
+                } catch { 
                     totalChapters = course.numberOfModules || 0; 
                 }
 

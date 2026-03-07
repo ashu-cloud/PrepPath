@@ -4,7 +4,6 @@ import React from 'react'
 import { 
   Sparkles, 
   BrainCircuit, 
-  Search, 
   Database, 
   Rocket, 
   Quote,
@@ -15,7 +14,7 @@ import {
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
-function SectionHeader({ icon: Icon, title, subtitle }: { icon: any, title: string, subtitle: string }) {
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementType, title: string, subtitle: string }) {
   return (
     <div className="mb-12 flex flex-col items-center text-center">
       <div className="mb-4 rounded-full bg-white/5 p-3 ring-1 ring-white/10">
@@ -31,7 +30,7 @@ function SectionHeader({ icon: Icon, title, subtitle }: { icon: any, title: stri
   )
 }
 
-function WorkflowCard({ icon: Icon, title, description, step }: { icon: any, title: string, description: string, step: number }) {
+function WorkflowCard({ icon: Icon, title, description, step }: { icon: React.ElementType, title: string, description: string, step: number }) {
   return (
     <div className="relative flex flex-col items-start p-6 rounded-2xl border border-white/10 bg-[#13131a] overflow-hidden group hover:border-violet-500/50 transition-all duration-300">
       <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-violet-500/10 blur-[60px] group-hover:bg-violet-500/20 transition-all"></div>
@@ -75,7 +74,7 @@ export default function AboutPage() {
             </span>
           </h1>
           <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-gray-400 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-            PrepPath isn't a course library. It's an AI that builds your course from scratch — structured around what you already know, not what a content creator decided to record three years ago.
+            PrepPath isn&apos;t a course library. It&apos;s an AI that builds your course from scratch — structured around what you already know, not what a content creator decided to record three years ago.
           </p>
         </div>
       </div>
@@ -88,10 +87,10 @@ export default function AboutPage() {
           <div className="absolute -top-4 -left-4">
             <Quote className="h-12 w-12 text-violet-500/20 transform -scale-x-100" />
           </div>
-          <h3 className="text-2xl font-bold text-white mb-6">The Problem We're Solving</h3>
+          <h3 className="text-2xl font-bold text-white mb-6">The Problem We&apos;re Solving</h3>
           <div className="space-y-6 text-gray-300 leading-relaxed text-lg font-light">
             <p>
-              Every course platform assumes you know nothing. So you sit through 40 minutes of "what is a variable" before they get to the thing you actually came for.
+              Every course platform assumes you know nothing. So you sit through 40 minutes of &quot;what is a variable&quot; before they get to the thing you actually came for.
             </p>
             <p>
               Or you already know the basics and have to scrub through a 6-hour YouTube video hunting for the 12 minutes that are actually relevant to you.
@@ -180,10 +179,10 @@ export default function AboutPage() {
         {/* --- THE JOKE --- */}
         <div className="mx-auto max-w-2xl text-center mb-24 py-12 px-6 rounded-2xl border border-dashed border-white/10 bg-white/[0.01]">
           <p className="text-lg text-gray-400 italic font-serif">
-            "A junior dev asks his senior: 'How long will it take to learn React?'<br />
-            The senior thinks for a moment and says: 'About two weeks.'<br />
-            The junior is relieved. 'Oh great, that's not bad at all.'<br />
-            The senior nods slowly. 'Yeah. Two weeks to learn it. The next three years are just to figure out when not to use it.'"
+            &quot;A junior dev asks his senior: &apos;How long will it take to learn React?&apos;<br />
+            The senior thinks for a moment and says: &apos;About two weeks.&apos;<br />
+            The junior is relieved. &apos;Oh great, that&apos;s not bad at all.&apos;<br />
+            The senior nods slowly. &apos;Yeah. Two weeks to learn it. The next three years are just to figure out when not to use it.&apos;&quot;
           </p>
           <p className="mt-4 text-sm font-bold text-violet-400">— Every senior engineer ever</p>
         </div>
