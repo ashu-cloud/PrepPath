@@ -21,7 +21,7 @@
 ## � Live Demo
 
 **Check out the live application here:**
-[**https://prep-path-gfxslfq30-ashupanchal8360-6347s-projects.vercel.app/**](https://www.prep-pathlearning.me/)
+[**https://www.prep-pathlearning.me/**](https://www.prep-pathlearning.me/)
 
 Explore the community courses, sign up for a free account, and generate your very own AI-curated learning path in seconds. 
 
